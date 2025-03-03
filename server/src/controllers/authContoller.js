@@ -1,0 +1,218 @@
+const jwt = require("jsonwebtoken");
+const crypto = require("crypto");
+const User = require("../models/userSchema");
+
+//-----------------//
+// @desc    Register a new user
+// @route   POST /api/auth/register
+// @access  Public
+exports.register = async (req, res) => {
+  try {
+    const { name, email, password } = req.body;
+
+    // Check if user already exists via email
+    let user = await User.findOne({ email });
+    if (user) {
+      return res.status(400).json({ message: "User already exists" });
+    }
+
+    // Create new user
+    user = new User({
+      name,
+      email,
+      password,
+    });
+
+    // Hash password via pre-save middleware
+    await user.save();
+
+    // Generate JWT
+    const token = jwt.sign(
+      { id: user._id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: process.env.JWT_EXPIRES_IN || "30d" }
+    );
+
+    res.status(201).json({
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
+    });
+  } catch (error) {
+    console.error("Error in register:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+//-----------------//
+// @desc    Login user
+// @route   POST /api/auth/login
+// @access  Public
+exports.login = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    // Check if user exists
+    const user = await User.findOne({ email }).select("+password");
+    if (!user) {
+      return res.status(400).json({ message: "Invalid credentials" });
+    }
+
+    // Check password
+    const isMatch = await user.comparePassword(password);
+    if (!isMatch) {
+      return res.status(400).json({ message: "Invalid credentials" });
+    }
+
+    // Generate JWT
+    const token = jwt.sign(
+      { id: user._id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: process.env.JWT_EXPIRES_IN || "30d" }
+    );
+
+    res.json({
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
+    });
+  } catch (error) {
+    console.error("Error in login:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+//-----------------//
+// @desc    Forgot password - Generate reset token
+// @route   POST /api/auth/forgot-password
+// @access  Public
+exports.forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    // Check if user exists
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Generate password reset token
+    const resetToken = user.createPasswordResetToken();
+    await user.save({ validateBeforeSave: false });
+
+    // Send reset token via email (implement email service here)
+    console.log(`Password reset token: ${resetToken}`);
+
+    res.status(200).json({
+      message: "Password reset token sent to email",
+      resetToken,
+    });
+  } catch (error) {
+    console.error("Error in forgotPassword:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// @desc    Reset password
+// @route   PATCH /api/auth/reset-password/:token
+// @access  Public
+exports.resetPassword = async (req, res) => {
+  try {
+    const { token } = req.params;
+    const { password } = req.body;
+
+    // Hash the token to compare with stored token
+    const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+
+    // Find user by reset token and check expiration
+    const user = await User.findOne({
+      passwordResetToken: hashedToken,
+      passwordResetExpires: { $gt: Date.now() },
+    });
+
+    if (!user) {
+      return res.status(400).json({ message: "Invalid or expired token" });
+    }
+
+    // Update password and clear reset token
+    user.password = password;
+    user.passwordResetToken = undefined;
+    user.passwordResetExpires = undefined;
+    await user.save();
+
+    res.status(200).json({ message: "Password reset successful" });
+  } catch (error) {
+    console.error("Error in resetPassword:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// @desc    Get current user's profile
+// @route   GET /api/auth/me
+// @access  Private
+exports.getMe = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select("-password");
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    res.json(user);
+  } catch (error) {
+    console.error("Error in getMe:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// @desc    Update current user's profile
+// @route   PUT /api/auth/update-me
+// @access  Private
+exports.updateMe = async (req, res) => {
+  try {
+    const { name, email } = req.body;
+
+    const user = await User.findByIdAndUpdate(
+      req.user.id,
+      { name, email },
+      { new: true, runValidators: true }
+    ).select("-password");
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.json(user);
+  } catch (error) {
+    console.error("Error in updateMe:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// @desc    Delete current user's account
+// @route   DELETE /api/auth/delete-me
+// @access  Private
+exports.deleteMe = async (req, res) => {
+  try {
+    const user = await User.findByIdAndUpdate(
+      req.user.id,
+      { active: false },
+      { new: true }
+    );
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.status(204).json({ message: "User deactivated successfully" });
+  } catch (error) {
+    console.error("Error in deleteMe:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
