@@ -1,29 +1,62 @@
 const express = require("express");
+const mongoose = require("mongoose");
+const dotenv = require("dotenv");
+const morgan = require("morgan");
 const helmet = require("helmet");
+const xss = require("xss-clean");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
+const rateLimit = require("express-rate-limit");
 const session = require("express-session");
 const MongoStore = require("connect-mongo");
 const connectDB = require("./config/db");
 const { authLimiter } = require("./security/rateLimiter");
 const { sanitizeInput, sanitizeMongo } = require("./security/inputSanitizer");
+
+// Import routes
 const authRoutes = require("./routes/authRoutes");
-require("dotenv").config();
+const userRoutes = require("./routes/userRoutes");
+const eventRoutes = require("./routes/eventRoutes");
+const shiftRoutes = require("./routes/shiftRoutes");
+const participationRoutes = require("./routes/participationRoutes");
+
+// Load environment variables
+dotenv.config();
 
 const app = express();
+
 // Connect to MongoDB
 connectDB()
-  .then(() => console.log("MongoDB connected"))
+  .then(() => console.log("Connected to MongoDB"))
   .catch((err) => console.error("MongoDB connection error:", err));
 
-// Security middleware
-app.use(helmet());
-app.use(cors());
-app.use(sanitizeMongo);
-app.use(sanitizeInput);
+// Configure CORS
+const allowedOrigins = process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : ["http://localhost:3000"];
+app.use(cors({
+  origin: function(origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV !== "production") {
+      callback(null, true);
+    } else {
+      console.warn(`Origin ${origin} not allowed by CORS`);
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+  credentials: true,
+  allowedHeaders: ["Content-Type", "Authorization"]
+}));
+
+// Middleware
+app.use(express.json());
 app.use(cookieParser());
-app.use(express.json({ limit: "10kb" })); // Limit payload size
-app.use(express.urlencoded({ extended: true }));
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
+app.use(xss());
+app.use(morgan("dev"));
 
 // Session configuration
 app.use(
@@ -44,23 +77,39 @@ app.use(
   })
 );
 
-// Apply rate limiting to auth routes
-app.use("/api/auth", authLimiter);
+// Rate limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  message: "Too many requests from this IP, please try again later"
+});
+app.use("/api/", limiter);
 
 // Routes
 app.use("/api/auth", authRoutes);
+app.use("/api/users", userRoutes);
+app.use("/api/events", eventRoutes);
+app.use("/api/shifts", shiftRoutes);
+app.use("/api/participations", participationRoutes);
 
-// Global error handler
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({
-    error:
-      process.env.NODE_ENV === "production"
-        ? "Internal server error"
-        : err.message,
+// 404 Route
+app.use("*", (req, res) => {
+  res.status(404).json({
+    success: false,
+    message: "Resource not found"
   });
 });
 
+// Error handler
+app.use((err, req, res, next) => {
+  console.error("Error:", err);
+  res.status(err.statusCode || 500).json({
+    success: false,
+    message: err.message || "Internal Server Error"
+  });
+});
+
+// Start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

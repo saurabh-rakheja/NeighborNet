@@ -3,16 +3,14 @@ import { Link, useLocation } from "react-router-dom";
 import {
   FiHome,
   FiCalendar,
-  FiUsers,
   FiClock,
-  FiBarChart2,
-  FiMap,
-  FiSettings,
+  FiUser,
   FiHelpCircle,
+  FiSettings,
   FiChevronLeft,
   FiChevronRight,
   FiLogOut,
-  FiUser,
+  FiBell
 } from "react-icons/fi";
 import useAuthStore from "../../../store/authStore";
 
@@ -21,6 +19,7 @@ const Sidebar = ({ isMobile, onToggle }) => {
   const [activeSubmenu, setActiveSubmenu] = useState(null);
   const location = useLocation();
   const { user, logout } = useAuthStore();
+  const [notifications, setNotifications] = useState(3);
 
   // Collapse sidebar by default on mobile
   useEffect(() => {
@@ -37,9 +36,10 @@ const Sidebar = ({ isMobile, onToggle }) => {
   }, [collapsed, onToggle]);
 
   const isActive = (path) => {
-    return (
-      location.pathname === path || location.pathname.startsWith(`${path}/`)
-    );
+    if (path === "/dashboard") {
+      return true; // Always make Dashboard appear active
+    }
+    return location.pathname === path;
   };
 
   const toggleSubmenu = (index) => {
@@ -50,75 +50,54 @@ const Sidebar = ({ isMobile, onToggle }) => {
     setCollapsed(!collapsed);
   };
 
+  // Simplified navigation items
   const navigationItems = [
     {
       name: "Dashboard",
       icon: <FiHome />,
-      path: "/dashboard",
+      path: "/dashboard"
     },
     {
       name: "Events",
       icon: <FiCalendar />,
-      path: "/dashboard/events",
-      submenu: [
-        { name: "Upcoming", path: "/dashboard/events/upcoming" },
-        { name: "Past Events", path: "/dashboard/events/past" },
-        { name: "Create Event", path: "/dashboard/events/create" },
-      ],
+      path: "/dashboard/events"
     },
     {
-      name: "Volunteers",
-      icon: <FiUsers />,
-      path: "/dashboard/volunteers",
-      submenu: [
-        { name: "All Volunteers", path: "/dashboard/volunteers/all" },
-        { name: "Teams", path: "/dashboard/volunteers/teams" },
-      ],
-    },
-    {
-      name: "Time Tracking",
+      name: "My Shifts",
       icon: <FiClock />,
-      path: "/dashboard/hours",
+      path: "/dashboard/my-shifts",
+      badge: notifications > 0 ? notifications : null
     },
     {
-      name: "Reports",
-      icon: <FiBarChart2 />,
-      path: "/dashboard/reports",
-    },
-    {
-      name: "Locations",
-      icon: <FiMap />,
-      path: "/dashboard/locations",
-    },
-    {
-      name: "Settings",
-      icon: <FiSettings />,
-      path: "/dashboard/settings",
-      submenu: [
-        { name: "Account", path: "/dashboard/settings/account" },
-        { name: "Organization", path: "/dashboard/settings/organization" },
-        { name: "Notifications", path: "/dashboard/settings/notifications" },
-      ],
+      name: "Profile",
+      icon: <FiUser />,
+      path: "/dashboard/volunteer-profile"
     },
     {
       name: "Help",
       icon: <FiHelpCircle />,
-      path: "/dashboard/help",
-    },
+      path: "/dashboard/help"
+    }
   ];
+
+  // Handle logout
+  const handleLogout = () => {
+    logout();
+    window.location.href = "/auth/login";
+  };
 
   return (
     <aside
-      className={`bg-white border-r border-gray-200 h-full transition-all duration-300 ${
-        collapsed ? "w-20" : "w-64"
-      } flex flex-col shadow-sm`}
+      className={`bg-white backdrop-blur-sm bg-opacity-90 border-r border-gray-100 h-full transition-all duration-300 ${
+        collapsed ? "w-16" : "w-64"
+      } flex flex-col shadow-sm z-10`}
     >
-      {/* Logo and collapse toggle */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-100">
+      {/* Logo */}
+      <div className="flex items-center justify-between p-5 border-b border-gray-100">
         <Link to="/dashboard" className="flex items-center">
-          <div className="h-10 w-10 bg-indigo-600 rounded-lg flex items-center justify-center shadow-md shadow-indigo-200">
+          <div className="h-9 w-9 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl flex items-center justify-center shadow-md shadow-indigo-200/40">
             <svg
-              className="w-6 h-6 text-white"
+              className="w-5 h-5 text-white"
               xmlns="http://www.w3.org/2000/svg"
               fill="none"
               viewBox="0 0 24 24"
@@ -133,141 +112,115 @@ const Sidebar = ({ isMobile, onToggle }) => {
             </svg>
           </div>
           {!collapsed && (
-            <span className="ml-2 text-lg font-semibold text-gray-800">
-              NeighborNet
-            </span>
+            <div className="ml-2.5">
+              <span className="text-lg font-semibold text-gray-800 tracking-tight">
+                VolunteerHub
+              </span>
+            </div>
           )}
         </Link>
         <button
           onClick={toggleSidebar}
-          className="p-1 rounded-md hover:bg-gray-100 text-gray-500"
+          className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 transition-colors duration-200"
+          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
           {collapsed ? (
-            <FiChevronRight size={18} />
+            <FiChevronRight size={18} className="transition-transform duration-200" />
           ) : (
-            <FiChevronLeft size={18} />
+            <FiChevronLeft size={18} className="transition-transform duration-200" />
           )}
         </button>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto p-2">
-        <ul className="space-y-1">
+      <nav className="flex-1 overflow-y-auto py-5 px-3">
+        <ul className="space-y-1.5">
           {navigationItems.map((item, idx) => (
             <li key={item.path}>
-              {item.submenu ? (
-                <div className="mb-1">
-                  <button
-                    onClick={() => toggleSubmenu(idx)}
-                    className={`w-full flex items-center justify-between p-3 rounded-lg transition-colors ${
-                      isActive(item.path)
-                        ? "bg-indigo-50 text-indigo-700"
-                        : "text-gray-700 hover:bg-gray-100"
-                    } ${collapsed ? "justify-center" : ""}`}
-                  >
-                    <div className="flex items-center">
-                      <span className="text-lg">{item.icon}</span>
-                      {!collapsed && (
-                        <span className="ml-3 text-sm">{item.name}</span>
-                      )}
-                    </div>
-                    {!collapsed && (
-                      <span
-                        className={`transform transition-transform duration-200 ${
-                          activeSubmenu === idx ? "rotate-90" : ""
-                        }`}
-                      >
-                        <FiChevronRight size={16} />
+              <Link
+                to={item.path}
+                className={`flex items-center px-3.5 py-2.5 rounded-xl transition-all duration-200 ${
+                  isActive(item.path)
+                    ? "bg-gradient-to-r from-indigo-50 to-indigo-100 text-indigo-700 font-medium shadow-sm"
+                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                } ${collapsed ? "justify-center" : ""}`}
+              >
+                <span className={`text-lg relative ${isActive(item.path) ? "text-indigo-600" : ""}`}>
+                  {item.icon}
+                  {item.badge && (
+                    <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-red-500 text-[10px] text-white font-bold items-center justify-center">
+                        {item.badge}
                       </span>
-                    )}
-                  </button>
-
-                  {/* Submenu */}
-                  {!collapsed && activeSubmenu === idx && (
-                    <ul className="mt-1 pl-9 space-y-1">
-                      {item.submenu.map((subItem) => (
-                        <li key={subItem.path}>
-                          <Link
-                            to={subItem.path}
-                            className={`block p-2 rounded-md text-sm transition-colors ${
-                              isActive(subItem.path)
-                                ? "bg-indigo-50 text-indigo-700 font-medium"
-                                : "text-gray-600 hover:bg-gray-50"
-                            }`}
-                          >
-                            {subItem.name}
-                          </Link>
-                        </li>
-                      ))}
-                    </ul>
+                    </span>
                   )}
-                </div>
-              ) : (
-                <Link
-                  to={item.path}
-                  className={`flex items-center p-3 rounded-lg transition-colors ${
-                    isActive(item.path)
-                      ? "bg-indigo-50 text-indigo-700"
-                      : "text-gray-700 hover:bg-gray-100"
-                  } ${collapsed ? "justify-center" : ""}`}
-                >
-                  <span className="text-lg">{item.icon}</span>
-                  {!collapsed && (
-                    <span className="ml-3 text-sm">{item.name}</span>
-                  )}
-                </Link>
-              )}
+                </span>
+                {!collapsed && (
+                  <span className="ml-3 text-sm tracking-wide">
+                    {item.name}
+                  </span>
+                )}
+                {!collapsed && isActive(item.path) && (
+                  <span className="ml-auto w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
+                )}
+              </Link>
             </li>
           ))}
         </ul>
       </nav>
 
-      {/* Footer area with profile and logout */}
-      <div className="border-t border-gray-100">
-        {/* Profile button */}
-        <Link
-          to="/dashboard/profile"
-          className={`flex items-center p-4 hover:bg-gray-50 w-full transition-colors ${
-            collapsed ? "justify-center" : ""
-          }`}
-        >
-          <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 border border-indigo-200 flex items-center justify-center">
-            {user?.avatar ? (
-              <img
-                src={user.avatar}
-                alt={user.name}
-                className="w-full h-full rounded-full object-cover"
-              />
-            ) : (
-              <span className="text-sm font-medium">
-                {user?.name?.substring(0, 2) || "VH"}
-              </span>
-            )}
-          </div>
-          {!collapsed && (
-            <div className="ml-3 overflow-hidden">
-              <p className="text-sm font-medium text-gray-800 truncate">
-                {user?.name || "Volunteer User"}
-              </p>
-              <p className="text-xs text-gray-500 truncate">
-                {user?.role || "Volunteer"}
-              </p>
+      {/* Footer with settings and logout */}
+      <div className="border-t border-gray-100 mt-auto pt-2 pb-3 px-3">
+        <div className="space-y-1">
+          {/* Notifications */}
+          <Link
+            to="/dashboard/notifications"
+            className={`flex items-center px-3.5 py-2.5 rounded-xl text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-all duration-200 ${
+              collapsed ? "justify-center" : ""
+            }`}
+          >
+            <div className="text-lg relative">
+              <FiBell />
+              {notifications > 0 && (
+                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-red-500 text-[10px] text-white font-bold items-center justify-center">
+                    {notifications}
+                  </span>
+                </span>
+              )}
             </div>
-          )}
-        </Link>
-
-        {/* Logout button */}
-        <button
-          onClick={logout}
-          className={`flex items-center p-4 text-gray-700 hover:bg-gray-50 hover:text-red-600 w-full transition-colors border-t border-gray-100 ${
-            collapsed ? "justify-center" : ""
-          }`}
-        >
-          <span className="text-lg">
-            <FiLogOut />
-          </span>
-          {!collapsed && <span className="ml-3 text-sm">Logout</span>}
-        </button>
+            {!collapsed && <span className="ml-3 text-sm tracking-wide">Notifications</span>}
+          </Link>
+          
+          {/* Settings */}
+          <Link
+            to="/dashboard/settings"
+            className={`flex items-center px-3.5 py-2.5 rounded-xl text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-all duration-200 ${
+              collapsed ? "justify-center" : ""
+            }`}
+          >
+            <div className="text-lg">
+              <FiSettings />
+            </div>
+            {!collapsed && <span className="ml-3 text-sm tracking-wide">Settings</span>}
+          </Link>
+          
+          {/* Logout */}
+          <button
+            onClick={handleLogout}
+            className={`flex items-center px-3.5 py-2.5 rounded-xl text-gray-600 hover:bg-red-50 hover:text-red-600 transition-all duration-200 w-full ${
+              collapsed ? "justify-center" : ""
+            }`}
+          >
+            <div className="text-lg">
+              <FiLogOut />
+            </div>
+            {!collapsed && <span className="ml-3 text-sm tracking-wide">Logout</span>}
+          </button>
+        </div>
       </div>
     </aside>
   );

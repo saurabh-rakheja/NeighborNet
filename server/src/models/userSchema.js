@@ -27,12 +27,116 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      default: "user",
+      default: "volunteer",
       enum: {
-        values: ["user", "admin", "farmer", "distributor", "retailer"],
+        values: ["volunteer", "ngo", "admin"],
         message: "Please select a valid role",
       },
     },
+    // Basic profile for all users
+    phoneNumber: {
+      type: String,
+      trim: true,
+    },
+    address: {
+      street: { type: String, trim: true },
+      city: { type: String, trim: true },
+      state: { type: String, trim: true },
+      zipCode: { type: String, trim: true },
+      country: { type: String, trim: true, default: "United States" },
+    },
+    bio: {
+      type: String,
+      trim: true,
+      maxLength: [500, "Bio cannot exceed 500 characters"],
+    },
+    profilePicture: {
+      type: String, // URL to image
+      default: "/images/default-avatar.png",
+    },
+    
+    // NGO specific fields
+    organization: {
+      type: String,
+      trim: true,
+      maxLength: [100, "Organization name cannot exceed 100 characters"],
+      // Required only if role is ngo
+      validate: {
+        validator: function(value) {
+          return this.role !== 'ngo' || (value && value.length > 0);
+        },
+        message: 'Organization name is required for NGO accounts'
+      }
+    },
+    organizationDetails: {
+      description: { type: String, trim: true },
+      website: { type: String, trim: true },
+      mission: { type: String, trim: true },
+      foundedYear: { type: Number },
+      size: { type: String, enum: ["Small", "Medium", "Large"] },
+      registrationNumber: { type: String, trim: true },
+      taxId: { type: String, trim: true },
+    },
+    organizationLogo: {
+      type: String, // URL to image
+    },
+    
+    // Volunteer specific fields
+    skills: [{
+      type: String,
+      trim: true,
+    }],
+    availability: {
+      weekdays: {
+        type: [String],
+        enum: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+      },
+      timeSlots: {
+        type: [String],
+        enum: ["Morning", "Afternoon", "Evening"],
+      }
+    },
+    preferredLocations: [{
+      type: String,
+      trim: true,
+    }],
+    experience: {
+      type: String,
+      enum: ["Beginner", "Intermediate", "Expert"],
+    },
+    interests: [{
+      type: String,
+      trim: true,
+    }],
+    emergencyContact: {
+      name: {
+        type: String,
+        trim: true,
+      },
+      relationship: {
+        type: String,
+        trim: true,
+      },
+      phone: {
+        type: String,
+        trim: true,
+      },
+    },
+    verificationStatus: {
+      type: String,
+      enum: ["Pending", "Verified", "Rejected"],
+      default: "Pending",
+    },
+    totalHours: {
+      type: Number,
+      default: 0,
+    },
+    notes: {
+      type: String,
+      trim: true,
+    },
+    
+    // Authentication and security
     tokenVersion: {
       type: Number,
       default: 0,
@@ -57,31 +161,39 @@ const userSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Hash password before saving
+// Pre-save middleware to hash password
 userSchema.pre("save", async function (next) {
+  // Only hash the password if it's modified (or new)
   if (!this.isModified("password")) return next();
 
   try {
-    const salt = await bcrypt.genSalt(12);
+    // Generate salt
+    const salt = await bcrypt.genSalt(10);
+    // Hash password
     this.password = await bcrypt.hash(this.password, salt);
-    this.passwordChangedAt = Date.now() - 1000;
+    // Set password changed date
+    if (this.isNew) this.passwordChangedAt = Date.now() - 1000;
     next();
   } catch (error) {
     next(error);
   }
 });
 
-// Compare password
-userSchema.methods.comparePassword = async function (candidatePassword) {
-  try {
-    return await bcrypt.compare(candidatePassword, this.password);
-  } catch (error) {
-    console.error("Error comparing passwords:", error);
-    throw new Error("Error comparing passwords");
-  }
+// Method to check if password matches
+userSchema.methods.matchPassword = async function (enteredPassword) {
+  return await bcrypt.compare(enteredPassword, this.password);
 };
 
-// Generate password reset token
+// Method to check if password was changed after a token was issued
+userSchema.methods.passwordChangedAfter = function (JWTTimestamp) {
+  if (this.passwordChangedAt) {
+    const changedTimestamp = parseInt(this.passwordChangedAt.getTime() / 1000, 10);
+    return JWTTimestamp < changedTimestamp;
+  }
+  return false;
+};
+
+// Method to create password reset token
 userSchema.methods.createPasswordResetToken = function () {
   const resetToken = crypto.randomBytes(32).toString("hex");
 
@@ -95,10 +207,30 @@ userSchema.methods.createPasswordResetToken = function () {
   return resetToken;
 };
 
-// Exclude inactive users from query results
-userSchema.pre(/^find/, function (next) {
-  this.find({ active: { $ne: false } });
-  next();
-});
+// Method to increment login attempts
+userSchema.methods.incrementLoginAttempts = async function () {
+  // If we have a previous lock that has expired, restart at 1
+  if (this.lockUntil && this.lockUntil < Date.now()) {
+    return this.updateOne({
+      $set: { loginAttempts: 1 },
+      $unset: { lockUntil: 1 },
+    });
+  }
+
+  // Otherwise, increment login attempts
+  const updates = { $inc: { loginAttempts: 1 } };
+
+  // Lock the account if we've reached max attempts (5) and it's not locked already
+  if (this.loginAttempts + 1 >= 5 && !this.lockUntil) {
+    updates.$set = { lockUntil: Date.now() + 60 * 60 * 1000 }; // 1 hour lock
+  }
+
+  return this.updateOne(updates);
+};
+
+// Method to check if account is locked
+userSchema.methods.isLocked = function () {
+  return this.lockUntil && this.lockUntil > Date.now();
+};
 
 module.exports = mongoose.model("User", userSchema);
