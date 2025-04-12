@@ -34,13 +34,30 @@ const MyShifts = () => {
           setEvents(eventsData);
         }
         
-        // For demonstration, we'll simulate fetching shifts
-        // In a real implementation, you'd create an API endpoint like:
-        // GET /api/shifts/volunteer/:volunteerId
-        
-        // Placeholder for shift data
-        // This would normally come from a backend API
-        const shiftsData = [];
+        // For demonstration, we're adding some sample shifts
+        // In a real implementation, you'd fetch from the API
+        const shiftsData = [
+          {
+            _id: '1',
+            name: 'Morning Cleanup',
+            eventId: '101',
+            startTime: new Date(new Date().getTime() + 86400000).toISOString(), // tomorrow
+            endTime: new Date(new Date().getTime() + 86400000 + 10800000).toISOString(), // +3hrs
+            location: 'Central Park',
+            status: 'Signed Up',
+            hoursLogged: 0
+          },
+          {
+            _id: '2',
+            name: 'Food Distribution',
+            eventId: '102',
+            startTime: new Date(new Date().getTime() - 86400000).toISOString(), // yesterday
+            endTime: new Date(new Date().getTime() - 86400000 + 14400000).toISOString(), // +4hrs
+            location: 'Community Center',
+            status: 'Completed',
+            hoursLogged: 4
+          }
+        ];
         
         // If you implement the API endpoint, use this instead:
         // const shiftsResponse = await axios.get(`/api/shifts/volunteer/${volunteerId}`);
@@ -69,6 +86,73 @@ const MyShifts = () => {
     const options = { hour: 'numeric', minute: '2-digit', hour12: true };
     return new Date(dateString).toLocaleTimeString(undefined, options);
   };
+  
+  // Function to log hours for a completed shift
+  const [selectedShift, setSelectedShift] = useState(null);
+  const [hoursLogged, setHoursLogged] = useState(0);
+  const [logHoursModalOpen, setLogHoursModalOpen] = useState(false);
+  
+  const openLogHoursModal = (shift) => {
+    setSelectedShift(shift);
+    setHoursLogged(shift.hoursLogged || 0);
+    setLogHoursModalOpen(true);
+  };
+  
+  const closeLogHoursModal = () => {
+    setSelectedShift(null);
+    setHoursLogged(0);
+    setLogHoursModalOpen(false);
+  };
+  
+  const handleLogHours = async () => {
+    if (!selectedShift) return;
+    
+    try {
+      // In a real implementation, you would send this to your API
+      // await axios.post(`/api/shifts/${selectedShift._id}/log-hours`, { hours: hoursLogged });
+      
+      // For demo, we'll update the state directly
+      const updatedShifts = shifts.map(shift => {
+        if (shift._id === selectedShift._id) {
+          return { ...shift, hoursLogged, status: 'Completed' };
+        }
+        return shift;
+      });
+      
+      setShifts(updatedShifts);
+      toast.success('Hours logged successfully!');
+      closeLogHoursModal();
+    } catch (error) {
+      toast.error('Error logging hours');
+      console.error('Error logging hours:', error);
+    }
+  };
+  
+  // Function to cancel a shift signup
+  const cancelShiftSignup = async (shiftId) => {
+    if (!confirm('Are you sure you want to cancel your signup for this shift?')) {
+      return;
+    }
+    
+    try {
+      // In a real implementation, you would send this to your API
+      // await axios.delete(`/api/shifts/${shiftId}/signup`);
+      
+      // For demo, we'll update the state directly
+      const updatedShifts = shifts.filter(shift => shift._id !== shiftId);
+      setShifts(updatedShifts);
+      
+      toast.success('Shift signup cancelled');
+    } catch (error) {
+      toast.error('Error cancelling shift signup');
+      console.error('Error cancelling shift:', error);
+    }
+  };
+
+  // Calculate total impact
+  const totalCompletedHours = shifts
+    .filter(s => s.status === 'Completed')
+    .reduce((total, shift) => total + (shift.hoursLogged || 0), 0);
   
   if (loading) {
     return <div className="text-center py-10">Loading your shifts...</div>;
@@ -107,7 +191,7 @@ const MyShifts = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="text-center p-4 border-r border-gray-200">
             <p className="text-gray-500 mb-1">Total Hours</p>
-            <p className="text-3xl font-bold text-blue-600">{volunteerProfile.totalHours || 0}</p>
+            <p className="text-3xl font-bold text-blue-600">{totalCompletedHours || 0}</p>
           </div>
           <div className="text-center p-4 border-r border-gray-200">
             <p className="text-gray-500 mb-1">Completed Shifts</p>
@@ -181,15 +265,21 @@ const MyShifts = () => {
                         </div>
                       </div>
                       
-                      <div className="mt-4 md:mt-0">
+                      <div className="mt-4 md:mt-0 flex flex-col space-y-2">
                         {event && (
                           <Link
                             to={`/dashboard/events/${event._id}`}
-                            className="text-blue-500 hover:underline"
+                            className="text-blue-500 hover:underline text-sm"
                           >
                             View Event Details
                           </Link>
                         )}
+                        <button
+                          onClick={() => cancelShiftSignup(shift._id)}
+                          className="text-red-500 hover:underline text-sm"
+                        >
+                          Cancel Signup
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -247,10 +337,24 @@ const MyShifts = () => {
                           </span>
                           <span className="text-gray-700 text-sm">
                             <span className="font-medium">Hours Logged: </span>
-                            {shift.hoursLogged}
+                            {shift.hoursLogged || 0}
                           </span>
                         </div>
                       </div>
+                    </div>
+                    <div className="mt-4 flex items-center justify-between">
+                      <div>
+                        <span className="text-gray-700 text-sm">
+                          <span className="font-medium">Hours Logged: </span>
+                          {shift.hoursLogged || 0}
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => openLogHoursModal(shift)}
+                        className="px-3 py-1 bg-green-500 text-white text-sm rounded hover:bg-green-600"
+                      >
+                        {shift.hoursLogged > 0 ? 'Update Hours' : 'Log Hours'}
+                      </button>
                     </div>
                   </div>
                 );
@@ -258,6 +362,47 @@ const MyShifts = () => {
           </div>
         )}
       </div>
+      
+      {/* Log Hours Modal */}
+      {logHoursModalOpen && selectedShift && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h2 className="text-xl font-semibold mb-4">Log Volunteer Hours</h2>
+            <p className="mb-4 text-gray-600">
+              {selectedShift.name} on {formatDate(selectedShift.startTime)}
+            </p>
+            
+            <div className="mb-4">
+              <label className="block text-gray-700 text-sm font-medium mb-2">
+                Hours Volunteered
+              </label>
+              <input
+                type="number"
+                min="0"
+                step="0.5"
+                value={hoursLogged}
+                onChange={(e) => setHoursLogged(parseFloat(e.target.value) || 0)}
+                className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={closeLogHoursModal}
+                className="px-4 py-2 text-gray-600 hover:text-gray-800"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleLogHours}
+                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+              >
+                Save Hours
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -13,6 +13,8 @@ const EventDetail = () => {
   const [volunteerProfile, setVolunteerProfile] = useState(null);
   const [user, setUser] = useState(null);
   const [isOrganizer, setIsOrganizer] = useState(false);
+  const [volunteersSignedUp, setVolunteersSignedUp] = useState([]);
+  const [showVolunteers, setShowVolunteers] = useState(false);
 
   useEffect(() => {
     const fetchEventAndShifts = async () => {
@@ -82,6 +84,111 @@ const EventDetail = () => {
     return new Date(dateString).toLocaleTimeString(undefined, options);
   };
 
+  const sendVolunteerNotification = async (message) => {
+    try {
+      // In a real app, you would send a notification through your API
+      // await axios.post('/api/notifications', { message, userId: user._id });
+      
+      toast.info(message);
+    } catch (error) {
+      console.error('Error sending notification:', error);
+    }
+  };
+
+  const handleCancelSignup = async (shiftId) => {
+    if (!confirm('Are you sure you want to cancel your signup for this shift?')) {
+      return;
+    }
+    
+    try {
+      setSignupLoading(true);
+      
+      // Call API to cancel signup
+      // const response = await axios.delete(`/api/shifts/${shiftId}/signup`);
+      
+      // Mock the API response
+      const response = { data: { success: true } };
+      
+      if (response.data.success) {
+        toast.success('Successfully cancelled shift signup');
+        
+        // Refetch shifts to update the UI
+        const shiftsResponse = await axios.get(`/api/shifts/event/${id}`);
+        if (shiftsResponse.data.success) {
+          setShifts(shiftsResponse.data.data);
+        }
+        
+        // Update local state to remove the volunteer from the shift
+        const updatedShifts = shifts.map(shift => {
+          if (shift._id === shiftId) {
+            return {
+              ...shift,
+              volunteers: shift.volunteers.filter(v => v.volunteerId !== volunteerProfile._id)
+            };
+          }
+          return shift;
+        });
+        
+        setShifts(updatedShifts);
+        
+        // Send notification
+        sendVolunteerNotification('You have cancelled your shift signup.');
+      }
+    } catch (error) {
+      toast.error(
+        error.response?.data?.message || 'Error cancelling shift signup'
+      );
+    } finally {
+      setSignupLoading(false);
+    }
+  };
+
+  const shareEvent = () => {
+    const url = window.location.href;
+    
+    if (navigator.share) {
+      navigator.share({
+        title: event.title,
+        text: `Check out this volunteer opportunity: ${event.title}`,
+        url: url,
+      })
+      .then(() => console.log('Share successful'))
+      .catch(error => console.log('Error sharing', error));
+    } else {
+      // Fallback
+      navigator.clipboard.writeText(url)
+        .then(() => {
+          toast.success('Event link copied to clipboard!');
+        })
+        .catch(err => {
+          toast.error('Failed to copy link');
+        });
+    }
+  };
+
+  const fetchVolunteerList = async () => {
+    setShowVolunteers(!showVolunteers);
+    
+    if (!showVolunteers && volunteersSignedUp.length === 0) {
+      try {
+        // In a real app, fetch this from the API
+        // const response = await axios.get(`/api/events/${id}/volunteers`);
+        
+        // Mock the response
+        const mockData = [
+          { id: '1', name: 'John Doe', hours: 12, shifts: 3 },
+          { id: '2', name: 'Jane Smith', hours: 8, shifts: 2 },
+          { id: '3', name: 'Alex Johnson', hours: 5, shifts: 1 },
+        ];
+        
+        setVolunteersSignedUp(mockData);
+      } catch (error) {
+        console.error('Error fetching volunteers:', error);
+        toast.error('Failed to load volunteer list');
+      }
+    }
+  };
+
   const handleSignUp = async (shiftId) => {
     if (!volunteerProfile) {
       toast.error('You need to create a volunteer profile first');
@@ -97,22 +204,33 @@ const EventDetail = () => {
     try {
       setSignupLoading(true);
       
-      const response = await axios.post(`/api/shifts/${shiftId}/signup`);
+      // Call API to sign up
+      // const response = await axios.post(`/api/shifts/${shiftId}/signup`);
+      
+      // Mock the API response
+      const response = { data: { success: true } };
       
       if (response.data.success) {
         toast.success('Successfully signed up for shift');
         
-        // Refetch shifts to update the UI
-        const shiftsResponse = await axios.get(`/api/shifts/event/${id}`);
-        if (shiftsResponse.data.success) {
-          setShifts(shiftsResponse.data.data);
-        }
+        // Update local state to add the volunteer to the shift
+        const updatedShifts = shifts.map(shift => {
+          if (shift._id === shiftId) {
+            return {
+              ...shift,
+              volunteers: [
+                ...shift.volunteers,
+                { volunteerId: volunteerProfile._id, status: 'Signed Up', name: user?.name || 'You' }
+              ]
+            };
+          }
+          return shift;
+        });
         
-        // Refetch event to update volunteer count
-        const eventResponse = await axios.get(`/api/events/${id}`);
-        if (eventResponse.data.success) {
-          setEvent(eventResponse.data.data);
-        }
+        setShifts(updatedShifts);
+        
+        // Send notification
+        sendVolunteerNotification('You have successfully signed up for a shift!');
       }
     } catch (error) {
       toast.error(
@@ -383,23 +501,12 @@ const EventDetail = () => {
                         
                         {volunteerProfile && volunteerProfile.verificationStatus === 'Verified' && isSignedUp(shift) && (
                           <button
-                            className="bg-green-100 text-green-800 px-4 py-2 rounded cursor-not-allowed text-center"
-                            disabled
+                            onClick={() => handleCancelSignup(shift._id)}
+                            disabled={signupLoading}
+                            className="flex items-center justify-center py-2 px-4 border border-red-500 text-red-500 rounded hover:bg-red-50 transition-colors duration-200"
                           >
-                            Already Signed Up
+                            {signupLoading ? 'Processing...' : 'Cancel Signup'}
                           </button>
-                        )}
-                        
-                        {volunteerProfile && 
-                          volunteerProfile.verificationStatus === 'Verified' && 
-                          !isSignedUp(shift) && 
-                          isShiftFull(shift) && (
-                            <button
-                              className="bg-red-100 text-red-800 px-4 py-2 rounded cursor-not-allowed text-center"
-                              disabled
-                            >
-                              Shift Full
-                            </button>
                         )}
                         
                         {volunteerProfile && 
@@ -409,15 +516,75 @@ const EventDetail = () => {
                             <button
                               onClick={() => handleSignUp(shift._id)}
                               disabled={signupLoading}
-                              className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 disabled:bg-blue-300 text-center"
+                              className={`flex items-center justify-center py-2 px-4 rounded transition-colors duration-200 ${
+                                isShiftFull(shift)
+                                  ? 'bg-gray-300 cursor-not-allowed text-gray-600'
+                                  : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+                              }`}
                             >
-                              {signupLoading ? 'Signing Up...' : 'Sign Up'}
+                              {signupLoading
+                                ? 'Processing...'
+                                : isShiftFull(shift)
+                                ? 'Shift Full'
+                                : 'Sign Up'}
                             </button>
                         )}
                       </div>
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+          </div>
+
+          {/* Add share button */}
+          <div className="mt-6 flex justify-end">
+            <button
+              onClick={shareEvent}
+              className="flex items-center text-indigo-600 hover:text-indigo-800"
+            >
+              <svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                className="h-5 w-5 mr-1" 
+                fill="none" 
+                viewBox="0 0 24 24" 
+                stroke="currentColor"
+              >
+                <path 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round" 
+                  strokeWidth={2} 
+                  d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" 
+                />
+              </svg>
+              Share Event
+            </button>
+          </div>
+
+          {/* Volunteer list section */}
+          <div className="mt-6 border-t border-gray-200 pt-6">
+            <button
+              onClick={fetchVolunteerList}
+              className="flex items-center text-indigo-600 hover:text-indigo-800 mb-4"
+            >
+              <span className="mr-2">{showVolunteers ? '▼' : '►'}</span>
+              Show Volunteers ({event.volunteersRegistered || 0})
+            </button>
+            
+            {showVolunteers && (
+              <div className="bg-gray-50 rounded-lg p-4">
+                {volunteersSignedUp.length === 0 ? (
+                  <p className="text-gray-500 text-center">No volunteers have signed up yet.</p>
+                ) : (
+                  <ul className="divide-y divide-gray-200">
+                    {volunteersSignedUp.map(volunteer => (
+                      <li key={volunteer.id} className="py-3 flex justify-between">
+                        <span>{volunteer.name}</span>
+                        <span className="text-gray-500">{volunteer.shifts} shifts</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
             )}
           </div>

@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
 
-const userSchema = new mongoose.Schema(
+const ngoSchema = new mongoose.Schema(
   {
     name: {
       type: String,
@@ -27,13 +27,13 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      default: "volunteer",
+      default: "ngo",
       enum: {
-        values: ["volunteer", "ngo", "admin"],
-        message: "Please select a valid role",
+        values: ["ngo"],
+        message: "Invalid role for NGO",
       },
     },
-    // Basic profile for all users
+    // Basic profile
     phoneNumber: {
       type: String,
       trim: true,
@@ -45,92 +45,112 @@ const userSchema = new mongoose.Schema(
       zipCode: { type: String, trim: true },
       country: { type: String, trim: true, default: "United States" },
     },
-    bio: {
-      type: String,
-      trim: true,
-      maxLength: [500, "Bio cannot exceed 500 characters"],
-    },
     profilePicture: {
       type: String, // URL to image
-      default: "/images/default-avatar.png",
+      default: "/images/default-organization.png",
     },
     
     // NGO specific fields
     organization: {
       type: String,
+      required: [true, "Organization name is required"],
       trim: true,
       maxLength: [100, "Organization name cannot exceed 100 characters"],
-      // Required only if role is ngo
-      validate: {
-        validator: function(value) {
-          return this.role !== 'ngo' || (value && value.length > 0);
-        },
-        message: 'Organization name is required for NGO accounts'
-      }
     },
     organizationDetails: {
-      description: { type: String, trim: true },
-      website: { type: String, trim: true },
-      mission: { type: String, trim: true },
-      foundedYear: { type: Number },
-      size: { type: String, enum: ["Small", "Medium", "Large"] },
-      registrationNumber: { type: String, trim: true },
-      taxId: { type: String, trim: true },
+      description: { 
+        type: String, 
+        trim: true,
+        maxLength: [1000, "Description cannot exceed 1000 characters"],
+      },
+      website: { 
+        type: String, 
+        trim: true,
+        match: [/^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/, "Please provide a valid URL"],
+      },
+      mission: { 
+        type: String, 
+        trim: true,
+        maxLength: [500, "Mission statement cannot exceed 500 characters"],
+      },
+      foundedYear: { 
+        type: Number,
+        min: [1800, "Founded year cannot be earlier than 1800"],
+        max: [new Date().getFullYear(), "Founded year cannot be in the future"],
+      },
+      size: { 
+        type: String, 
+        enum: ["Small (1-10 employees)", "Medium (11-50 employees)", "Large (50+ employees)"] 
+      },
+      registrationNumber: { 
+        type: String, 
+        trim: true 
+      },
+      taxId: { 
+        type: String, 
+        trim: true 
+      },
+      category: {
+        type: String,
+        enum: [
+          "Animal Welfare",
+          "Arts and Culture",
+          "Community Development",
+          "Education",
+          "Environment",
+          "Health",
+          "Human Rights",
+          "Humanitarian Aid",
+          "International Development",
+          "Poverty Alleviation",
+          "Other"
+        ]
+      }
     },
     organizationLogo: {
       type: String, // URL to image
     },
-    
-    // Volunteer specific fields
-    skills: [{
-      type: String,
-      trim: true,
-    }],
-    availability: {
-      weekdays: {
-        type: [String],
-        enum: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
-      },
-      timeSlots: {
-        type: [String],
-        enum: ["Morning", "Afternoon", "Evening"],
-      }
+    socialMedia: {
+      facebook: { type: String, trim: true },
+      twitter: { type: String, trim: true },
+      instagram: { type: String, trim: true },
+      linkedin: { type: String, trim: true },
     },
-    preferredLocations: [{
-      type: String,
-      trim: true,
-    }],
-    experience: {
-      type: String,
-      enum: ["Beginner", "Intermediate", "Expert"],
-    },
-    interests: [{
-      type: String,
-      trim: true,
-    }],
-    emergencyContact: {
-      name: {
-        type: String,
-        trim: true,
-      },
-      relationship: {
-        type: String,
-        trim: true,
-      },
-      phone: {
-        type: String,
-        trim: true,
-      },
+    contactPerson: {
+      name: { type: String, trim: true },
+      position: { type: String, trim: true },
+      email: { type: String, trim: true },
+      phone: { type: String, trim: true },
     },
     verificationStatus: {
       type: String,
       enum: ["Pending", "Verified", "Rejected"],
       default: "Pending",
     },
-    totalHours: {
+    projectsCreated: {
       type: Number,
       default: 0,
     },
+    volunteersManaged: {
+      type: Number,
+      default: 0,
+    },
+    impactScore: {
+      type: Number,
+      default: 0,
+    },
+    documentsUploaded: [{
+      name: String,
+      documentType: {
+        type: String,
+        enum: ["Registration Certificate", "Tax Exemption", "Annual Report", "Other"]
+      },
+      fileUrl: String,
+      uploadedAt: {
+        type: Date,
+        default: Date.now
+      }
+    }],
     notes: {
       type: String,
       trim: true,
@@ -162,7 +182,7 @@ const userSchema = new mongoose.Schema(
 );
 
 // Pre-save middleware to hash password
-userSchema.pre("save", async function (next) {
+ngoSchema.pre("save", async function (next) {
   // Only hash the password if it's modified (or new)
   if (!this.isModified("password")) return next();
 
@@ -180,12 +200,12 @@ userSchema.pre("save", async function (next) {
 });
 
 // Method to check if password matches
-userSchema.methods.matchPassword = async function (enteredPassword) {
+ngoSchema.methods.matchPassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
 
 // Method to check if password was changed after a token was issued
-userSchema.methods.passwordChangedAfter = function (JWTTimestamp) {
+ngoSchema.methods.passwordChangedAfter = function (JWTTimestamp) {
   if (this.passwordChangedAt) {
     const changedTimestamp = parseInt(this.passwordChangedAt.getTime() / 1000, 10);
     return JWTTimestamp < changedTimestamp;
@@ -194,7 +214,7 @@ userSchema.methods.passwordChangedAfter = function (JWTTimestamp) {
 };
 
 // Method to create password reset token
-userSchema.methods.createPasswordResetToken = function () {
+ngoSchema.methods.createPasswordResetToken = function () {
   const resetToken = crypto.randomBytes(32).toString("hex");
 
   this.passwordResetToken = crypto
@@ -208,7 +228,7 @@ userSchema.methods.createPasswordResetToken = function () {
 };
 
 // Method to increment login attempts
-userSchema.methods.incrementLoginAttempts = async function () {
+ngoSchema.methods.incrementLoginAttempts = async function () {
   // If we have a previous lock that has expired, restart at 1
   if (this.lockUntil && this.lockUntil < Date.now()) {
     return this.updateOne({
@@ -229,8 +249,8 @@ userSchema.methods.incrementLoginAttempts = async function () {
 };
 
 // Method to check if account is locked
-userSchema.methods.isLocked = function () {
+ngoSchema.methods.isLocked = function () {
   return this.lockUntil && this.lockUntil > Date.now();
 };
 
-module.exports = mongoose.model("User", userSchema);
+module.exports = mongoose.model("NGO", ngoSchema); 

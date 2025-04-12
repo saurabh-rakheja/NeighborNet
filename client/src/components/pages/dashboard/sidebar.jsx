@@ -10,7 +10,17 @@ import {
   FiChevronLeft,
   FiChevronRight,
   FiLogOut,
-  FiBell
+  FiBell,
+  FiBarChart,
+  FiMapPin,
+  FiUsers,
+  FiHeart,
+  FiPlusCircle,
+  FiBook,
+  FiAward,
+  FiMessageSquare,
+  FiClipboard,
+  FiLayers,
 } from "react-icons/fi";
 import useAuthStore from "../../../store/authStore";
 
@@ -36,10 +46,24 @@ const Sidebar = ({ isMobile, onToggle }) => {
   }, [collapsed, onToggle]);
 
   const isActive = (path) => {
-    if (path === "/dashboard") {
-      return true; // Always make Dashboard appear active
+    // Exact match for dashboard home
+    if (path === "/dashboard" && location.pathname === "/dashboard") {
+      return true;
     }
-    return location.pathname === path;
+
+    // For other paths, check if current path starts with the nav item path
+    // But make sure we're not matching partial path segments
+    if (path !== "/dashboard") {
+      // Ensure we match complete path segments by checking for path boundary
+      return (
+        location.pathname === path ||
+        (location.pathname.startsWith(path) &&
+          (location.pathname.charAt(path.length) === "/" ||
+            location.pathname.length === path.length))
+      );
+    }
+
+    return false;
   };
 
   const toggleSubmenu = (index) => {
@@ -50,34 +74,124 @@ const Sidebar = ({ isMobile, onToggle }) => {
     setCollapsed(!collapsed);
   };
 
-  // Simplified navigation items
-  const navigationItems = [
+  // User capabilities based navigation
+  const isAdmin = user?.role === "admin" || user?.isAdmin;
+  const hasNGOCapabilities = user?.role === "ngo";
+  const hasVolunteerCapabilities = user?.role === "volunteer";
+
+  // Common navigation items for all users
+  const generalNav = [
     {
       name: "Dashboard",
       icon: <FiHome />,
-      path: "/dashboard"
+      path: "/dashboard",
     },
     {
       name: "Events",
       icon: <FiCalendar />,
-      path: "/dashboard/events"
+      path: "/dashboard/events",
     },
     {
       name: "My Shifts",
       icon: <FiClock />,
       path: "/dashboard/my-shifts",
-      badge: notifications > 0 ? notifications : null
+      badge: notifications > 0 ? notifications : null,
     },
+  ];
+
+  // NGO specific navigation items
+  const ngoNav = hasNGOCapabilities
+    ? [
+        {
+          name: "Create Project",
+          icon: <FiPlusCircle />,
+          path: "/dashboard/create-event",
+        },
+        {
+          name: "Manage Volunteers",
+          icon: <FiUsers />,
+          path: "/dashboard/manage-volunteers",
+        },
+        {
+          name: "Applications",
+          icon: <FiClipboard />,
+          path: "/dashboard/applications",
+        },
+        {
+          name: "Analytics",
+          icon: <FiBarChart />,
+          path: "/dashboard/analytics",
+        },
+        {
+          name: "Messages",
+          icon: <FiMessageSquare />,
+          path: "/dashboard/messages",
+        },
+      ]
+    : [];
+
+  // Volunteer specific navigation items
+  const volunteerNav = hasVolunteerCapabilities
+    ? [
+        {
+          name: "My Profile",
+          icon: <FiUser />,
+          path: "/dashboard/volunteer-profile",
+        },
+        {
+          name: "My Impact",
+          icon: <FiHeart />,
+          path: "/dashboard/impact",
+        },
+        {
+          name: "Skills",
+          icon: <FiBook />,
+          path: "/dashboard/skills",
+        },
+        {
+          name: "Certificates",
+          icon: <FiAward />,
+          path: "/dashboard/certificates",
+        },
+        {
+          name: "Training",
+          icon: <FiLayers />,
+          path: "/dashboard/training",
+        },
+      ]
+    : [];
+
+  const adminNav = isAdmin
+    ? [
+        {
+          name: "Admin Panel",
+          icon: <FiUsers />,
+          path: "/dashboard/admin",
+        },
+        {
+          name: "Manage Volunteers",
+          icon: <FiUsers />,
+          path: "/dashboard/admin/volunteers",
+        },
+        {
+          name: "Reports",
+          icon: <FiBarChart />,
+          path: "/dashboard/admin/reports",
+        },
+      ]
+    : [];
+
+  const supportNav = [
     {
-      name: "Profile",
-      icon: <FiUser />,
-      path: "/dashboard/volunteer-profile"
-    },
-    {
-      name: "Help",
+      name: "Help Center",
       icon: <FiHelpCircle />,
-      path: "/dashboard/help"
-    }
+      path: "/dashboard/help",
+    },
+    {
+      name: "Settings",
+      icon: <FiSettings />,
+      path: "/dashboard/settings",
+    },
   ];
 
   // Handle logout
@@ -86,18 +200,74 @@ const Sidebar = ({ isMobile, onToggle }) => {
     window.location.href = "/auth/login";
   };
 
+  // Render a nav section with title
+  const renderNavSection = (title, items) => {
+    if (items.length === 0) return null;
+
+    return (
+      <div className="mb-6">
+        {!collapsed && title && (
+          <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-4 mb-2">
+            {title}
+          </h3>
+        )}
+        <ul className="space-y-1">
+          {items.map((item) => (
+            <li key={item.path}>
+              <Link
+                to={item.path}
+                className={`flex items-center px-4 py-3 rounded-xl transition-all duration-200 ${
+                  isActive(item.path)
+                    ? hasNGOCapabilities
+                      ? "bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-medium"
+                      : "bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-medium"
+                    : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                } ${collapsed ? "justify-center" : ""}`}
+              >
+                <span
+                  className={`text-lg relative ${
+                    isActive(item.path) ? "text-white" : ""
+                  }`}
+                >
+                  {item.icon}
+                  {item.badge && (
+                    <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-red-500 text-[10px] text-white font-bold items-center justify-center">
+                        {item.badge}
+                      </span>
+                    </span>
+                  )}
+                </span>
+                {!collapsed && (
+                  <span className="ml-3 text-sm">{item.name}</span>
+                )}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
+  };
+
   return (
     <aside
-      className={`bg-white backdrop-blur-sm bg-opacity-90 border-r border-gray-100 h-full transition-all duration-300 ${
-        collapsed ? "w-16" : "w-64"
-      } flex flex-col shadow-sm z-10`}
+      className={`bg-white border-r border-gray-100 h-full transition-all duration-300 ${
+        collapsed ? "w-20" : "w-64"
+      } flex flex-col shadow-md z-10`}
     >
       {/* Logo */}
       <div className="flex items-center justify-between p-5 border-b border-gray-100">
         <Link to="/dashboard" className="flex items-center">
-          <div className="h-9 w-9 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl flex items-center justify-center shadow-md shadow-indigo-200/40">
+          <div
+            className={`h-10 w-10 rounded-xl flex items-center justify-center shadow-lg ${
+              hasNGOCapabilities
+                ? "bg-gradient-to-br from-blue-600 to-cyan-500"
+                : "bg-gradient-to-br from-indigo-600 to-purple-600"
+            }`}
+          >
             <svg
-              className="w-5 h-5 text-white"
+              className="w-6 h-6 text-white"
               xmlns="http://www.w3.org/2000/svg"
               fill="none"
               viewBox="0 0 24 24"
@@ -112,115 +282,92 @@ const Sidebar = ({ isMobile, onToggle }) => {
             </svg>
           </div>
           {!collapsed && (
-            <div className="ml-2.5">
-              <span className="text-lg font-semibold text-gray-800 tracking-tight">
-                VolunteerHub
+            <div className="ml-3">
+              <span className="text-lg font-bold text-gray-800">
+                NeighborNet
               </span>
             </div>
           )}
         </Link>
         <button
           onClick={toggleSidebar}
-          className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 transition-colors duration-200"
+          className="w-8 h-8 flex items-center justify-center rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-500 transition-colors duration-200"
           aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
           {collapsed ? (
-            <FiChevronRight size={18} className="transition-transform duration-200" />
+            <FiChevronRight size={18} />
           ) : (
-            <FiChevronLeft size={18} className="transition-transform duration-200" />
+            <FiChevronLeft size={18} />
           )}
         </button>
       </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto py-5 px-3">
-        <ul className="space-y-1.5">
-          {navigationItems.map((item, idx) => (
-            <li key={item.path}>
-              <Link
-                to={item.path}
-                className={`flex items-center px-3.5 py-2.5 rounded-xl transition-all duration-200 ${
-                  isActive(item.path)
-                    ? "bg-gradient-to-r from-indigo-50 to-indigo-100 text-indigo-700 font-medium shadow-sm"
-                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                } ${collapsed ? "justify-center" : ""}`}
-              >
-                <span className={`text-lg relative ${isActive(item.path) ? "text-indigo-600" : ""}`}>
-                  {item.icon}
-                  {item.badge && (
-                    <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-red-500 text-[10px] text-white font-bold items-center justify-center">
-                        {item.badge}
-                      </span>
-                    </span>
-                  )}
-                </span>
-                {!collapsed && (
-                  <span className="ml-3 text-sm tracking-wide">
-                    {item.name}
-                  </span>
-                )}
-                {!collapsed && isActive(item.path) && (
-                  <span className="ml-auto w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
-                )}
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </nav>
-
-      {/* Footer with settings and logout */}
-      <div className="border-t border-gray-100 mt-auto pt-2 pb-3 px-3">
-        <div className="space-y-1">
-          {/* Notifications */}
-          <Link
-            to="/dashboard/notifications"
-            className={`flex items-center px-3.5 py-2.5 rounded-xl text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-all duration-200 ${
-              collapsed ? "justify-center" : ""
-            }`}
-          >
-            <div className="text-lg relative">
-              <FiBell />
-              {notifications > 0 && (
-                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-red-500 text-[10px] text-white font-bold items-center justify-center">
-                    {notifications}
-                  </span>
-                </span>
+      {/* User profile summary */}
+      {!collapsed && (
+        <div className="px-4 py-4 border-b border-gray-100">
+          <div className="flex items-center">
+            <div className="flex-shrink-0">
+              {user?.avatar ? (
+                <img
+                  src={user.avatar}
+                  alt={user.name}
+                  className="w-10 h-10 rounded-full object-cover border-2 border-indigo-100"
+                />
+              ) : (
+                <div
+                  className={`w-10 h-10 rounded-full flex items-center justify-center font-medium border-2 ${
+                    hasNGOCapabilities
+                      ? "bg-gradient-to-br from-blue-100 to-cyan-100 text-blue-600 border-blue-100"
+                      : "bg-gradient-to-br from-indigo-100 to-purple-100 text-indigo-600 border-indigo-100"
+                  }`}
+                >
+                  {user?.name?.substring(0, 2) || "U"}
+                </div>
               )}
             </div>
-            {!collapsed && <span className="ml-3 text-sm tracking-wide">Notifications</span>}
-          </Link>
-          
-          {/* Settings */}
-          <Link
-            to="/dashboard/settings"
-            className={`flex items-center px-3.5 py-2.5 rounded-xl text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-all duration-200 ${
-              collapsed ? "justify-center" : ""
-            }`}
-          >
-            <div className="text-lg">
-              <FiSettings />
+            <div className="ml-3 overflow-hidden">
+              <p className="text-sm font-medium text-gray-800 truncate">
+                {user?.name || "User"}
+              </p>
+              <p className="text-xs text-gray-500 truncate">
+                {hasNGOCapabilities && hasVolunteerCapabilities
+                  ? "Organization & Volunteer"
+                  : hasNGOCapabilities
+                  ? "Organization"
+                  : "Volunteer"}
+              </p>
             </div>
-            {!collapsed && <span className="ml-3 text-sm tracking-wide">Settings</span>}
-          </Link>
-          
-          {/* Logout */}
-          <button
-            onClick={handleLogout}
-            className={`flex items-center px-3.5 py-2.5 rounded-xl text-gray-600 hover:bg-red-50 hover:text-red-600 transition-all duration-200 w-full ${
-              collapsed ? "justify-center" : ""
-            }`}
-          >
-            <div className="text-lg">
-              <FiLogOut />
-            </div>
-            {!collapsed && <span className="ml-3 text-sm tracking-wide">Logout</span>}
-          </button>
+          </div>
         </div>
+      )}
+
+      {/* Navigation menu */}
+      <div className="flex-1 overflow-y-auto py-4 px-3">
+        {renderNavSection("General", generalNav)}
+
+        {/* Show Organization section if user has NGO capabilities */}
+        {hasNGOCapabilities && renderNavSection("Organization", ngoNav)}
+
+        {/* Show Volunteering section if user has volunteer capabilities */}
+        {hasVolunteerCapabilities &&
+          renderNavSection("My Volunteering", volunteerNav)}
+
+        {isAdmin && renderNavSection("Administration", adminNav)}
+
+        {renderNavSection("Support", supportNav)}
+      </div>
+
+      {/* Logout button */}
+      <div className="p-3 border-t border-gray-100">
+        <button
+          onClick={handleLogout}
+          className={`w-full flex items-center px-4 py-2 text-gray-600 rounded-lg hover:bg-gray-100 hover:text-gray-900 ${
+            collapsed ? "justify-center" : ""
+          }`}
+        >
+          <FiLogOut className="text-lg" />
+          {!collapsed && <span className="ml-3 text-sm">Logout</span>}
+        </button>
       </div>
     </aside>
   );

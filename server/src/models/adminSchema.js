@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
 
-const userSchema = new mongoose.Schema(
+const adminSchema = new mongoose.Schema(
   {
     name: {
       type: String,
@@ -27,109 +27,39 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      default: "volunteer",
+      default: "admin",
       enum: {
-        values: ["volunteer", "ngo", "admin"],
-        message: "Please select a valid role",
+        values: ["admin", "superadmin"],
+        message: "Invalid role for admin",
       },
     },
-    // Basic profile for all users
+    // Basic profile
     phoneNumber: {
       type: String,
       trim: true,
     },
-    address: {
-      street: { type: String, trim: true },
-      city: { type: String, trim: true },
-      state: { type: String, trim: true },
-      zipCode: { type: String, trim: true },
-      country: { type: String, trim: true, default: "United States" },
-    },
-    bio: {
-      type: String,
-      trim: true,
-      maxLength: [500, "Bio cannot exceed 500 characters"],
-    },
     profilePicture: {
       type: String, // URL to image
-      default: "/images/default-avatar.png",
+      default: "/images/default-admin.png",
     },
     
-    // NGO specific fields
-    organization: {
+    // Admin specific fields
+    department: {
       type: String,
-      trim: true,
-      maxLength: [100, "Organization name cannot exceed 100 characters"],
-      // Required only if role is ngo
-      validate: {
-        validator: function(value) {
-          return this.role !== 'ngo' || (value && value.length > 0);
-        },
-        message: 'Organization name is required for NGO accounts'
-      }
+      enum: ["IT", "HR", "Operations", "Support", "Management"],
+      default: "Support",
     },
-    organizationDetails: {
-      description: { type: String, trim: true },
-      website: { type: String, trim: true },
-      mission: { type: String, trim: true },
-      foundedYear: { type: Number },
-      size: { type: String, enum: ["Small", "Medium", "Large"] },
-      registrationNumber: { type: String, trim: true },
-      taxId: { type: String, trim: true },
+    permissions: {
+      manageUsers: { type: Boolean, default: true },
+      manageNGOs: { type: Boolean, default: true },
+      manageVolunteers: { type: Boolean, default: true },
+      manageProjects: { type: Boolean, default: true },
+      manageAdmins: { type: Boolean, default: false }, // Only superadmin can manage other admins
+      systemSettings: { type: Boolean, default: false }, // Only superadmin can change system settings
     },
-    organizationLogo: {
-      type: String, // URL to image
-    },
-    
-    // Volunteer specific fields
-    skills: [{
-      type: String,
-      trim: true,
-    }],
-    availability: {
-      weekdays: {
-        type: [String],
-        enum: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
-      },
-      timeSlots: {
-        type: [String],
-        enum: ["Morning", "Afternoon", "Evening"],
-      }
-    },
-    preferredLocations: [{
-      type: String,
-      trim: true,
-    }],
-    experience: {
-      type: String,
-      enum: ["Beginner", "Intermediate", "Expert"],
-    },
-    interests: [{
-      type: String,
-      trim: true,
-    }],
-    emergencyContact: {
-      name: {
-        type: String,
-        trim: true,
-      },
-      relationship: {
-        type: String,
-        trim: true,
-      },
-      phone: {
-        type: String,
-        trim: true,
-      },
-    },
-    verificationStatus: {
-      type: String,
-      enum: ["Pending", "Verified", "Rejected"],
-      default: "Pending",
-    },
-    totalHours: {
-      type: Number,
-      default: 0,
+    lastActive: {
+      type: Date,
+      default: Date.now,
     },
     notes: {
       type: String,
@@ -162,7 +92,7 @@ const userSchema = new mongoose.Schema(
 );
 
 // Pre-save middleware to hash password
-userSchema.pre("save", async function (next) {
+adminSchema.pre("save", async function (next) {
   // Only hash the password if it's modified (or new)
   if (!this.isModified("password")) return next();
 
@@ -180,12 +110,12 @@ userSchema.pre("save", async function (next) {
 });
 
 // Method to check if password matches
-userSchema.methods.matchPassword = async function (enteredPassword) {
+adminSchema.methods.matchPassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
 
 // Method to check if password was changed after a token was issued
-userSchema.methods.passwordChangedAfter = function (JWTTimestamp) {
+adminSchema.methods.passwordChangedAfter = function (JWTTimestamp) {
   if (this.passwordChangedAt) {
     const changedTimestamp = parseInt(this.passwordChangedAt.getTime() / 1000, 10);
     return JWTTimestamp < changedTimestamp;
@@ -194,7 +124,7 @@ userSchema.methods.passwordChangedAfter = function (JWTTimestamp) {
 };
 
 // Method to create password reset token
-userSchema.methods.createPasswordResetToken = function () {
+adminSchema.methods.createPasswordResetToken = function () {
   const resetToken = crypto.randomBytes(32).toString("hex");
 
   this.passwordResetToken = crypto
@@ -208,7 +138,7 @@ userSchema.methods.createPasswordResetToken = function () {
 };
 
 // Method to increment login attempts
-userSchema.methods.incrementLoginAttempts = async function () {
+adminSchema.methods.incrementLoginAttempts = async function () {
   // If we have a previous lock that has expired, restart at 1
   if (this.lockUntil && this.lockUntil < Date.now()) {
     return this.updateOne({
@@ -229,8 +159,8 @@ userSchema.methods.incrementLoginAttempts = async function () {
 };
 
 // Method to check if account is locked
-userSchema.methods.isLocked = function () {
+adminSchema.methods.isLocked = function () {
   return this.lockUntil && this.lockUntil > Date.now();
 };
 
-module.exports = mongoose.model("User", userSchema);
+module.exports = mongoose.model("Admin", adminSchema); 

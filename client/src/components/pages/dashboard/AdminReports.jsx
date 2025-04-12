@@ -1,268 +1,581 @@
-import { useState, useEffect } from 'react';
-import axios from 'axios';
+import React, { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
+import { 
+  FiBarChart2, 
+  FiPieChart, 
+  FiUsers, 
+  FiCalendar, 
+  FiDownload, 
+  FiClock,
+  FiFilter,
+  FiRefreshCw
+} from 'react-icons/fi';
 
 const AdminReports = () => {
-  const [reports, setReports] = useState({
-    totalVolunteerHours: 0,
-    averageHoursPerVolunteer: 0,
-    mostPopularEvents: [],
-    topVolunteers: [],
-    monthlyStats: [],
-    categoryCounts: [],
-  });
   const [loading, setLoading] = useState(true);
-  const [timeframe, setTimeframe] = useState('all');
+  const [reportType, setReportType] = useState('volunteer');
+  const [timeFrame, setTimeFrame] = useState('month');
+  const [reportData, setReportData] = useState(null);
+  const [generatingReport, setGeneratingReport] = useState(false);
 
-  useEffect(() => {
-    fetchReportData();
-  }, [timeframe]);
+  // Generate mock data for reports
+  const generateMockData = () => {
+    let data = null;
 
-  const fetchReportData = async () => {
+    switch (reportType) {
+      case 'volunteer':
+        data = {
+          totalVolunteers: 245,
+          activeVolunteers: 183,
+          inactiveVolunteers: 62,
+          newVolunteers: timeFrame === 'week' ? 12 : timeFrame === 'month' ? 37 : 128,
+          topSkills: [
+            { name: 'Manual Labor', count: 98 },
+            { name: 'Communication', count: 85 },
+            { name: 'Organization', count: 72 },
+            { name: 'Customer Service', count: 66 },
+            { name: 'Leadership', count: 54 }
+          ],
+          volunteersByAge: [
+            { range: '18-24', count: 78 },
+            { range: '25-34', count: 92 },
+            { range: '35-44', count: 43 },
+            { range: '45-54', count: 19 },
+            { range: '55+', count: 13 }
+          ],
+          reliability: 87
+        };
+        break;
+      
+      case 'event':
+        data = {
+          totalEvents: timeFrame === 'week' ? 8 : timeFrame === 'month' ? 24 : 67,
+          upcomingEvents: timeFrame === 'week' ? 5 : timeFrame === 'month' ? 16 : 42,
+          completedEvents: timeFrame === 'week' ? 3 : timeFrame === 'month' ? 8 : 25,
+          totalHours: timeFrame === 'week' ? 265 : timeFrame === 'month' ? 976 : 2845,
+          topCategories: [
+            { name: 'Environmental', count: timeFrame === 'week' ? 3 : timeFrame === 'month' ? 9 : 22 },
+            { name: 'Community Support', count: timeFrame === 'week' ? 2 : timeFrame === 'month' ? 7 : 19 },
+            { name: 'Education', count: timeFrame === 'week' ? 1 : timeFrame === 'month' ? 5 : 14 },
+            { name: 'Food Donation', count: timeFrame === 'week' ? 1 : timeFrame === 'month' ? 3 : 12 }
+          ],
+          averageVolunteers: 12
+        };
+        break;
+      
+      case 'organization':
+        data = {
+          totalOrganizations: 28,
+          activeOrganizations: 22,
+          pendingVerification: 6,
+          topOrganizations: [
+            { name: 'Green Earth Alliance', events: 12, volunteers: 87 },
+            { name: 'Community Helpers', events: 9, volunteers: 64 },
+            { name: 'Literacy First', events: 8, volunteers: 53 },
+            { name: 'Elder Care Alliance', events: 7, volunteers: 42 },
+            { name: 'Ocean Guardians', events: 6, volunteers: 38 }
+          ],
+          organizationsByType: [
+            { type: 'Environmental', count: 8 },
+            { type: 'Education', count: 7 },
+            { type: 'Community Support', count: 6 },
+            { type: 'Healthcare', count: 4 },
+            { type: 'Animal Welfare', count: 3 }
+          ]
+        };
+        break;
+      
+      default:
+        data = {};
+    }
+
+    return data;
+  };
+
+  // Generate report based on selected type and timeframe
+  const generateReport = async () => {
+    setGeneratingReport(true);
+    
     try {
-      setLoading(true);
+      // In a real app, this would be an API call
+      // const response = await axios.get(`/api/reports/${reportType}`, { params: { timeFrame } });
+      // setReportData(response.data);
       
-      // In a real app, this would be an API endpoint that returns precomputed statistics
-      // For now, we'll simulate these reports with mock data
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 1200));
       
-      // Simulate an API call
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
-      // Sample data - in a real application, this would come from your API
-      const mockReports = {
-        totalVolunteerHours: 1248,
-        averageHoursPerVolunteer: 8.5,
-        mostPopularEvents: [
-          { _id: '1', title: 'Beach Cleanup', volunteerCount: 45, category: 'Environmental' },
-          { _id: '2', title: 'Food Drive', volunteerCount: 37, category: 'Food Donation' },
-          { _id: '3', title: 'Shelter Assistance', volunteerCount: 31, category: 'Community Service' },
-          { _id: '4', title: 'Animal Shelter Support', volunteerCount: 28, category: 'Animal Welfare' },
-          { _id: '5', title: 'Reading Program', volunteerCount: 24, category: 'Education' },
-        ],
-        topVolunteers: [
-          { _id: '1', name: 'John Smith', hours: 42, eventsAttended: 8 },
-          { _id: '2', name: 'Sarah Johnson', hours: 36, eventsAttended: 6 },
-          { _id: '3', name: 'Michael Brown', hours: 32, eventsAttended: 5 },
-          { _id: '4', name: 'Emily Davis', hours: 28, eventsAttended: 7 },
-          { _id: '5', name: 'Robert Wilson', hours: 24, eventsAttended: 4 },
-        ],
-        monthlyStats: [
-          { month: 'Jan', hours: 98, volunteers: 24 },
-          { month: 'Feb', hours: 112, volunteers: 28 },
-          { month: 'Mar', hours: 125, volunteers: 32 },
-          { month: 'Apr', hours: 143, volunteers: 36 },
-          { month: 'May', hours: 165, volunteers: 42 },
-          { month: 'Jun', hours: 178, volunteers: 45 },
-        ],
-        categoryCounts: [
-          { category: 'Environmental', count: 12 },
-          { category: 'Community Service', count: 18 },
-          { category: 'Education', count: 9 },
-          { category: 'Healthcare', count: 7 },
-          { category: 'Animal Welfare', count: 8 },
-          { category: 'Food Donation', count: 11 },
-          { category: 'Other', count: 5 },
-        ],
-      };
-      
-      setReports(mockReports);
+      // Use mock data for this example
+      setReportData(generateMockData());
+      toast.success('Report generated successfully');
     } catch (error) {
-      toast.error('Error fetching report data');
-      console.error('Error fetching report data:', error);
+      console.error('Error generating report:', error);
+      toast.error('Failed to generate report');
     } finally {
-      setLoading(false);
+      setGeneratingReport(false);
     }
   };
 
-  const handleTimeframeChange = (e) => {
-    setTimeframe(e.target.value);
+  // Load initial report data
+  useEffect(() => {
+    const loadInitialData = async () => {
+      try {
+        setLoading(true);
+        
+        // Simulate API delay
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Use mock data for initial load
+        setReportData(generateMockData());
+      } catch (error) {
+        console.error('Error loading initial report data:', error);
+        toast.error('Failed to load report data');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadInitialData();
+  }, []);
+
+  // Export report data
+  const exportReport = () => {
+    // In a real app, this would generate a CSV or PDF file
+    toast.success(`${reportType.charAt(0).toUpperCase() + reportType.slice(1)} report exported successfully`);
+  };
+
+  // Format numbers with commas
+  const formatNumber = (num) => {
+    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   };
 
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <p className="text-gray-500">Loading reports...</p>
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto p-4">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Volunteer Impact Reports</h1>
-        
-        <div>
-          <select
-            value={timeframe}
-            onChange={handleTimeframeChange}
-            className="border rounded px-3 py-2"
-          >
-            <option value="all">All Time</option>
-            <option value="month">Last Month</option>
-            <option value="quarter">Last Quarter</option>
-            <option value="year">Last Year</option>
-          </select>
-        </div>
+    <div className="max-w-6xl mx-auto pb-12">
+      <div className="mb-8">
+        <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Administrative Reports</h1>
+        <p className="text-gray-600 mt-1">
+          Generate and view reports for volunteers, events, and organizations
+        </p>
       </div>
       
-      {/* Summary Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-xl font-semibold mb-4">Volunteer Impact Summary</h2>
-          
-          <div className="space-y-4">
-            <div className="flex justify-between items-center pb-2 border-b">
-              <span className="text-gray-600">Total Volunteer Hours</span>
-              <span className="text-2xl font-bold">{reports.totalVolunteerHours}</span>
+      {/* Report Controls */}
+      <div className="bg-white rounded-xl shadow-md overflow-hidden mb-6">
+        <div className="p-6">
+          <div className="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4 md:items-end">
+            {/* Report Type */}
+            <div className="flex-1">
+              <label htmlFor="reportType" className="block text-sm font-medium text-gray-700 mb-1">
+                Report Type
+              </label>
+              <select
+                id="reportType"
+                value={reportType}
+                onChange={(e) => setReportType(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              >
+                <option value="volunteer">Volunteer Report</option>
+                <option value="event">Event Report</option>
+                <option value="organization">Organization Report</option>
+              </select>
             </div>
             
-            <div className="flex justify-between items-center pb-2 border-b">
-              <span className="text-gray-600">Average Hours per Volunteer</span>
-              <span className="text-2xl font-bold">{reports.averageHoursPerVolunteer}</span>
+            {/* Time Frame */}
+            {reportType !== 'organization' && (
+              <div className="flex-1">
+                <label htmlFor="timeFrame" className="block text-sm font-medium text-gray-700 mb-1">
+                  Time Frame
+                </label>
+                <select
+                  id="timeFrame"
+                  value={timeFrame}
+                  onChange={(e) => setTimeFrame(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                >
+                  <option value="week">Past Week</option>
+                  <option value="month">Past Month</option>
+                  <option value="year">Past Year</option>
+                </select>
+              </div>
+            )}
+            
+            {/* Generate Button */}
+            <div>
+              <button
+                onClick={generateReport}
+                disabled={generatingReport}
+                className="w-full md:w-auto px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 flex items-center justify-center"
+              >
+                {generatingReport ? (
+                  <>
+                    <FiRefreshCw className="animate-spin mr-2" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <FiFilter className="mr-2" />
+                    Generate Report
+                  </>
+                )}
+              </button>
             </div>
             
-            <div className="flex justify-between items-center pb-2 border-b">
-              <span className="text-gray-600">Total Events</span>
-              <span className="text-2xl font-bold">{reports.categoryCounts.reduce((sum, item) => sum + item.count, 0)}</span>
+            {/* Export Button */}
+            <div>
+              <button
+                onClick={exportReport}
+                disabled={!reportData || generatingReport}
+                className="w-full md:w-auto px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 flex items-center justify-center"
+              >
+                <FiDownload className="mr-2" />
+                Export
+              </button>
             </div>
           </div>
         </div>
-        
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-xl font-semibold mb-4">Event Categories</h2>
-          
-          <div className="space-y-3">
-            {reports.categoryCounts.map((item, index) => (
-              <div key={index} className="flex items-center">
-                <div className="w-full bg-gray-200 rounded-full h-4 mr-2">
-                  <div 
-                    className={`h-4 rounded-full ${
-                      item.category === 'Environmental' ? 'bg-green-500' :
-                      item.category === 'Community Service' ? 'bg-blue-500' :
-                      item.category === 'Education' ? 'bg-yellow-500' :
-                      item.category === 'Healthcare' ? 'bg-red-500' :
-                      item.category === 'Animal Welfare' ? 'bg-purple-500' :
-                      item.category === 'Food Donation' ? 'bg-orange-500' :
-                      'bg-gray-500'
-                    }`}
-                    style={{ width: `${(item.count / Math.max(...reports.categoryCounts.map(c => c.count))) * 100}%` }}
-                  ></div>
+      </div>
+      
+      {/* Report Display */}
+      {reportData && (
+        <div className="space-y-6">
+          {/* Volunteer Report */}
+          {reportType === 'volunteer' && (
+            <>
+              {/* Summary Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="bg-white rounded-xl shadow-md p-6">
+                  <div className="flex items-center">
+                    <div className="p-3 rounded-full bg-blue-100 text-blue-600">
+                      <FiUsers className="text-xl" />
+                    </div>
+                    <div className="ml-4">
+                      <p className="text-sm font-medium text-gray-500">Total Volunteers</p>
+                      <p className="text-2xl font-bold text-gray-800">{formatNumber(reportData.totalVolunteers)}</p>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex justify-between w-48">
-                  <span className="text-sm">{item.category}</span>
-                  <span className="text-sm font-medium">{item.count}</span>
+                
+                <div className="bg-white rounded-xl shadow-md p-6">
+                  <div className="flex items-center">
+                    <div className="p-3 rounded-full bg-green-100 text-green-600">
+                      <FiUsers className="text-xl" />
+                    </div>
+                    <div className="ml-4">
+                      <p className="text-sm font-medium text-gray-500">Active Volunteers</p>
+                      <p className="text-2xl font-bold text-gray-800">{formatNumber(reportData.activeVolunteers)}</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="bg-white rounded-xl shadow-md p-6">
+                  <div className="flex items-center">
+                    <div className="p-3 rounded-full bg-purple-100 text-purple-600">
+                      <FiUsers className="text-xl" />
+                    </div>
+                    <div className="ml-4">
+                      <p className="text-sm font-medium text-gray-500">New Volunteers</p>
+                      <p className="text-2xl font-bold text-gray-800">{formatNumber(reportData.newVolunteers)}</p>
+                      <p className="text-xs text-gray-500">
+                        Past {timeFrame === 'week' ? 'week' : timeFrame === 'month' ? 'month' : 'year'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="bg-white rounded-xl shadow-md p-6">
+                  <div className="flex items-center">
+                    <div className="p-3 rounded-full bg-yellow-100 text-yellow-600">
+                      <FiPieChart className="text-xl" />
+                    </div>
+                    <div className="ml-4">
+                      <p className="text-sm font-medium text-gray-500">Reliability Score</p>
+                      <p className="text-2xl font-bold text-gray-800">{reportData.reliability}%</p>
+                    </div>
+                  </div>
                 </div>
               </div>
-            ))}
-          </div>
-        </div>
-      </div>
-      
-      {/* Popular Events and Top Volunteers */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <div className="p-4 border-b">
-            <h2 className="text-xl font-semibold">Most Popular Events</h2>
-          </div>
-          
-          <div className="p-2">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead>
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Event Name</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Volunteers</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {reports.mostPopularEvents.map((event) => (
-                  <tr key={event._id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">{event.title}</td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">{event.category}</td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-right">{event.volunteerCount}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-        
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <div className="p-4 border-b">
-            <h2 className="text-xl font-semibold">Top Volunteers</h2>
-          </div>
-          
-          <div className="p-2">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead>
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Volunteer</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Hours</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Events</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {reports.topVolunteers.map((volunteer) => (
-                  <tr key={volunteer._id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">{volunteer.name}</td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-right">{volunteer.hours}</td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-right">{volunteer.eventsAttended}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-      
-      {/* Monthly Trends */}
-      <div className="bg-white rounded-lg shadow p-6 mb-8">
-        <h2 className="text-xl font-semibold mb-4">Monthly Volunteer Trends</h2>
-        
-        <div className="h-64 flex items-end justify-between space-x-2">
-          {reports.monthlyStats.map((stat, index) => (
-            <div key={index} className="flex flex-col items-center flex-1">
-              <div className="w-full flex flex-col items-center space-y-1">
-                <div 
-                  className="w-full bg-blue-500 rounded-t"
-                  style={{ 
-                    height: `${(stat.hours / Math.max(...reports.monthlyStats.map(s => s.hours))) * 180}px` 
-                  }}
-                >
+              
+              {/* Skills and Demographics Charts */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Top Skills */}
+                <div className="bg-white rounded-xl shadow-md p-6">
+                  <h3 className="text-lg font-semibold text-gray-800 mb-4">Top Volunteer Skills</h3>
+                  <div className="space-y-3">
+                    {reportData.topSkills.map((skill, index) => (
+                      <div key={index}>
+                        <div className="flex justify-between mb-1">
+                          <span className="text-sm font-medium text-gray-700">{skill.name}</span>
+                          <span className="text-sm font-medium text-gray-500">{skill.count} volunteers</span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2.5">
+                          <div 
+                            className="bg-indigo-600 h-2.5 rounded-full" 
+                            style={{ width: `${(skill.count / reportData.totalVolunteers) * 100}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                <div 
-                  className="w-full bg-green-500 rounded-t"
-                  style={{ 
-                    height: `${(stat.volunteers / Math.max(...reports.monthlyStats.map(s => s.volunteers))) * 120}px` 
-                  }}
-                >
+                
+                {/* Volunteers by Age */}
+                <div className="bg-white rounded-xl shadow-md p-6">
+                  <h3 className="text-lg font-semibold text-gray-800 mb-4">Volunteers by Age Group</h3>
+                  <div className="space-y-3">
+                    {reportData.volunteersByAge.map((ageGroup, index) => (
+                      <div key={index}>
+                        <div className="flex justify-between mb-1">
+                          <span className="text-sm font-medium text-gray-700">{ageGroup.range}</span>
+                          <span className="text-sm font-medium text-gray-500">{ageGroup.count} volunteers</span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2.5">
+                          <div 
+                            className="bg-blue-500 h-2.5 rounded-full" 
+                            style={{ width: `${(ageGroup.count / reportData.totalVolunteers) * 100}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
-              <div className="mt-2 text-xs font-medium">{stat.month}</div>
-            </div>
-          ))}
+            </>
+          )}
+          
+          {/* Event Report */}
+          {reportType === 'event' && (
+            <>
+              {/* Summary Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="bg-white rounded-xl shadow-md p-6">
+                  <div className="flex items-center">
+                    <div className="p-3 rounded-full bg-blue-100 text-blue-600">
+                      <FiCalendar className="text-xl" />
+                    </div>
+                    <div className="ml-4">
+                      <p className="text-sm font-medium text-gray-500">Total Events</p>
+                      <p className="text-2xl font-bold text-gray-800">{formatNumber(reportData.totalEvents)}</p>
+                      <p className="text-xs text-gray-500">
+                        Past {timeFrame === 'week' ? 'week' : timeFrame === 'month' ? 'month' : 'year'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="bg-white rounded-xl shadow-md p-6">
+                  <div className="flex items-center">
+                    <div className="p-3 rounded-full bg-green-100 text-green-600">
+                      <FiCalendar className="text-xl" />
+                    </div>
+                    <div className="ml-4">
+                      <p className="text-sm font-medium text-gray-500">Upcoming Events</p>
+                      <p className="text-2xl font-bold text-gray-800">{formatNumber(reportData.upcomingEvents)}</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="bg-white rounded-xl shadow-md p-6">
+                  <div className="flex items-center">
+                    <div className="p-3 rounded-full bg-purple-100 text-purple-600">
+                      <FiUsers className="text-xl" />
+                    </div>
+                    <div className="ml-4">
+                      <p className="text-sm font-medium text-gray-500">Avg. Volunteers</p>
+                      <p className="text-2xl font-bold text-gray-800">{reportData.averageVolunteers}</p>
+                      <p className="text-xs text-gray-500">per event</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="bg-white rounded-xl shadow-md p-6">
+                  <div className="flex items-center">
+                    <div className="p-3 rounded-full bg-yellow-100 text-yellow-600">
+                      <FiClock className="text-xl" />
+                    </div>
+                    <div className="ml-4">
+                      <p className="text-sm font-medium text-gray-500">Total Hours</p>
+                      <p className="text-2xl font-bold text-gray-800">{formatNumber(reportData.totalHours)}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Event Categories Chart */}
+              <div className="bg-white rounded-xl shadow-md p-6">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">Events by Category</h3>
+                <div className="space-y-3">
+                  {reportData.topCategories.map((category, index) => (
+                    <div key={index}>
+                      <div className="flex justify-between mb-1">
+                        <span className="text-sm font-medium text-gray-700">{category.name}</span>
+                        <span className="text-sm font-medium text-gray-500">{category.count} events</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2.5">
+                        <div 
+                          className="bg-indigo-600 h-2.5 rounded-full" 
+                          style={{ width: `${(category.count / reportData.totalEvents) * 100}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              
+              {/* Event Timeline */}
+              <div className="bg-white rounded-xl shadow-md p-6">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">Event Status Timeline</h3>
+                <div className="flex h-20 items-center">
+                  <div className="flex-1 h-4 bg-green-200 rounded-l-full">
+                    <div className="h-full bg-green-500 rounded-l-full" style={{ width: `${(reportData.upcomingEvents / reportData.totalEvents) * 100}%` }}></div>
+                  </div>
+                  <div className="flex-1 h-4 bg-gray-200 rounded-r-full">
+                    <div className="h-full bg-gray-500 rounded-r-full" style={{ width: `${(reportData.completedEvents / reportData.totalEvents) * 100}%` }}></div>
+                  </div>
+                </div>
+                <div className="flex justify-between mt-2">
+                  <div className="text-center">
+                    <div className="flex items-center justify-center">
+                      <div className="w-3 h-3 bg-green-500 rounded-full mr-1"></div>
+                      <span className="text-sm font-medium text-gray-700">Upcoming</span>
+                    </div>
+                    <p className="text-lg font-semibold">{reportData.upcomingEvents}</p>
+                    <p className="text-xs text-gray-500">({Math.round((reportData.upcomingEvents / reportData.totalEvents) * 100)}%)</p>
+                  </div>
+                  <div className="text-center">
+                    <div className="flex items-center justify-center">
+                      <div className="w-3 h-3 bg-gray-500 rounded-full mr-1"></div>
+                      <span className="text-sm font-medium text-gray-700">Completed</span>
+                    </div>
+                    <p className="text-lg font-semibold">{reportData.completedEvents}</p>
+                    <p className="text-xs text-gray-500">({Math.round((reportData.completedEvents / reportData.totalEvents) * 100)}%)</p>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+          
+          {/* Organization Report */}
+          {reportType === 'organization' && (
+            <>
+              {/* Summary Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-white rounded-xl shadow-md p-6">
+                  <div className="flex items-center">
+                    <div className="p-3 rounded-full bg-blue-100 text-blue-600">
+                      <FiBarChart2 className="text-xl" />
+                    </div>
+                    <div className="ml-4">
+                      <p className="text-sm font-medium text-gray-500">Total Organizations</p>
+                      <p className="text-2xl font-bold text-gray-800">{formatNumber(reportData.totalOrganizations)}</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="bg-white rounded-xl shadow-md p-6">
+                  <div className="flex items-center">
+                    <div className="p-3 rounded-full bg-green-100 text-green-600">
+                      <FiBarChart2 className="text-xl" />
+                    </div>
+                    <div className="ml-4">
+                      <p className="text-sm font-medium text-gray-500">Active Organizations</p>
+                      <p className="text-2xl font-bold text-gray-800">{formatNumber(reportData.activeOrganizations)}</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="bg-white rounded-xl shadow-md p-6">
+                  <div className="flex items-center">
+                    <div className="p-3 rounded-full bg-yellow-100 text-yellow-600">
+                      <FiBarChart2 className="text-xl" />
+                    </div>
+                    <div className="ml-4">
+                      <p className="text-sm font-medium text-gray-500">Pending Verification</p>
+                      <p className="text-2xl font-bold text-gray-800">{formatNumber(reportData.pendingVerification)}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Top Organizations Table */}
+              <div className="bg-white rounded-xl shadow-md overflow-hidden">
+                <div className="px-6 py-4 border-b border-gray-200">
+                  <h3 className="text-lg font-semibold text-gray-800">Top Organizations by Activity</h3>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Organization
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Events
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Volunteers
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Participation Rate
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {reportData.topOrganizations.map((org, index) => (
+                        <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-800">
+                            {org.name}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {org.events}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {org.volunteers}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="w-full bg-gray-200 rounded-full h-2.5">
+                              <div 
+                                className="bg-indigo-600 h-2.5 rounded-full" 
+                                style={{ width: `${Math.min(100, (org.volunteers / org.events / 5) * 100)}%` }}
+                              ></div>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              
+              {/* Organizations by Type */}
+              <div className="bg-white rounded-xl shadow-md p-6">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">Organizations by Type</h3>
+                <div className="space-y-3">
+                  {reportData.organizationsByType.map((type, index) => (
+                    <div key={index}>
+                      <div className="flex justify-between mb-1">
+                        <span className="text-sm font-medium text-gray-700">{type.type}</span>
+                        <span className="text-sm font-medium text-gray-500">{type.count} organizations</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2.5">
+                        <div 
+                          className="bg-indigo-600 h-2.5 rounded-full" 
+                          style={{ width: `${(type.count / reportData.totalOrganizations) * 100}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
         </div>
-        
-        <div className="flex justify-center mt-4 space-x-6">
-          <div className="flex items-center">
-            <div className="w-4 h-4 bg-blue-500 rounded mr-2"></div>
-            <span className="text-sm">Hours</span>
-          </div>
-          <div className="flex items-center">
-            <div className="w-4 h-4 bg-green-500 rounded mr-2"></div>
-            <span className="text-sm">Volunteers</span>
-          </div>
-        </div>
-      </div>
-      
-      <div className="flex justify-center">
-        <button
-          onClick={() => window.print()}
-          className="bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-600"
-        >
-          Print Report
-        </button>
-      </div>
+      )}
     </div>
   );
 };

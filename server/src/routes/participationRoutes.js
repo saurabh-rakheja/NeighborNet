@@ -1,22 +1,53 @@
 const express = require("express");
 const router = express.Router();
 const participationController = require("../controllers/participationController");
-const { authenticateUser, authorizeRoles } = require("../middlewares/auth");
+const {
+  authenticateUser,
+  authorizeCapabilities,
+} = require("../middlewares/auth");
 
 // Apply authentication middleware to all routes
 router.use(authenticateUser);
 
-// Volunteer routes
-router.post("/register", authorizeRoles("volunteer"), participationController.registerForEvent);
-router.get("/volunteer", authorizeRoles("volunteer"), participationController.getVolunteerRegistrations);
-router.delete("/:id", authorizeRoles("volunteer"), participationController.cancelRegistration);
+// Volunteer routes - accessible to anyone with volunteer capabilities
+router.post(
+  "/register",
+  authorizeCapabilities("volunteer"),
+  participationController.registerForEvent
+);
+router.get(
+  "/volunteer",
+  authorizeCapabilities("volunteer"),
+  participationController.getVolunteerRegistrations
+);
+router.delete(
+  "/:id",
+  authorizeCapabilities("volunteer"),
+  participationController.cancelRegistration
+);
 
-// NGO routes
-router.get("/event/:eventId", authorizeRoles("ngo", "admin"), participationController.getEventParticipations);
-router.put("/checkin/:id", authorizeRoles("ngo", "admin"), participationController.checkInVolunteer);
-router.put("/checkout/:id", authorizeRoles("ngo", "admin"), participationController.checkOutVolunteer);
+// NGO routes - accessible to anyone with NGO capabilities
+router.get(
+  "/event/:eventId",
+  authorizeCapabilities("ngo"),
+  participationController.getEventParticipations
+);
+router.put(
+  "/checkin/:id",
+  authorizeCapabilities("ngo"),
+  participationController.checkInVolunteer
+);
+router.put(
+  "/checkout/:id",
+  authorizeCapabilities("ngo"),
+  participationController.checkOutVolunteer
+);
 
-// Admin routes
-router.get("/", authorizeRoles("admin"), participationController.getAllParticipations);
+// Admin routes - only accessible to admins
+router.get(
+  "/",
+  authorizeCapabilities("admin"),
+  participationController.getAllParticipations
+);
 
-module.exports = router; 
+module.exports = router;

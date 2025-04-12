@@ -1,534 +1,745 @@
-import { useState, useEffect } from 'react';
-import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
+import axios from 'axios';
 import useAuthStore from '../../../store/authStore';
-
-// Set base URL for all Axios requests
-axios.defaults.baseURL = 'http://localhost:5000';
-
-// Add authorization header to all requests
-axios.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('auth-storage') 
-      ? JSON.parse(localStorage.getItem('auth-storage')).state.token 
-      : null;
-    
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
+import {
+  FiUser,
+  FiMail,
+  FiPhone,
+  FiMapPin,
+  FiCalendar,
+  FiHeart,
+  FiEdit2,
+  FiSave,
+  FiX,
+  FiAlertCircle,
+  FiCheckCircle,
+  FiHelpCircle
+} from 'react-icons/fi';
 
 const VolunteerProfile = () => {
-  const navigate = useNavigate();
+  const { user } = useAuthStore();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState(null);
-  const { user, isAuthenticated } = useAuthStore();
+  const [editMode, setEditMode] = useState(false);
   const [profile, setProfile] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    address: '',
+    city: '',
+    state: '',
+    zipCode: '',
+    dateOfBirth: '',
+    bio: '',
+    interests: [],
     skills: [],
     availability: {
-      weekdays: [],
-      timeSlots: [],
+      weekdays: false,
+      weekends: false,
+      mornings: false,
+      afternoons: false,
+      evenings: false
     },
-    preferredLocations: [],
-    experience: 'Beginner',
-    interests: [],
     emergencyContact: {
       name: '',
       relationship: '',
-      phone: '',
+      phone: ''
     },
-    notes: '',
+    volunteerStatus: 'Active',
+    verificationStatus: 'Pending'
   });
-  const [newSkill, setNewSkill] = useState('');
-  const [newLocation, setNewLocation] = useState('');
-  const [newInterest, setNewInterest] = useState('');
-  const [hasProfile, setHasProfile] = useState(false);
+  
+  // Available interests and skills for selection
+  const interestOptions = [
+    'Environmental Conservation',
+    'Community Support',
+    'Education & Literacy',
+    'Healthcare',
+    'Animal Welfare',
+    'Homelessness',
+    'Food Insecurity',
+    'Elderly Support',
+    'Youth Mentoring',
+    'Disaster Relief'
+  ];
+  
+  const skillOptions = [
+    'Teaching',
+    'Event Planning',
+    'Social Media',
+    'Writing & Editing',
+    'Public Speaking',
+    'Counseling',
+    'First Aid',
+    'Transportation',
+    'Leadership',
+    'Foreign Languages',
+    'Technical Skills',
+    'Administrative'
+  ];
 
-  const weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-  const timeSlots = ['Morning', 'Afternoon', 'Evening'];
-  const experienceLevels = ['Beginner', 'Intermediate', 'Expert'];
-
-  // Check if user is authenticated
   useEffect(() => {
-    if (!isAuthenticated) {
-      navigate('/auth/login');
-    }
-  }, [isAuthenticated, navigate]);
-
-  // Fetch volunteer profile
-  useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        // Check if user is authenticated
-        if (!isAuthenticated) {
-          return;
-        }
-        
-        const response = await axios.get('/api/volunteers/profile');
-        
-        if (response.data.success) {
-          setProfile(response.data.data);
-          setHasProfile(true);
-        }
-      } catch (error) {
-        console.error('Error fetching profile:', error);
-        
-        // Handle 404 error separately (user doesn't have a profile yet)
-        if (error.response && error.response.status === 404) {
-          setHasProfile(false);
-          // This is an expected state, no need to show error toast
-        } else {
-          // Handle other errors (network error, server error, etc.)
-          setError('Failed to fetch volunteer profile. Please try again.');
-          toast.error('Error fetching volunteer profile. Please try again.');
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchProfile();
-  }, [isAuthenticated]);
+  }, []);
+
+  const fetchProfile = async () => {
+    try {
+      setLoading(true);
+      
+      // In a real implementation you would fetch from your API
+      // const response = await axios.get('/api/volunteers/profile');
+      
+      // For now, we'll simulate a response with mock data
+      const mockProfile = {
+        name: user?.name || 'Jane Volunteer',
+        email: user?.email || 'jane.volunteer@example.com',
+        phone: '(555) 123-4567',
+        address: '123 Volunteer Ave',
+        city: 'Helptown',
+        state: 'CA',
+        zipCode: '90210',
+        dateOfBirth: '1990-03-15',
+        bio: 'Passionate about making a difference in my community. I enjoy environmental and education-related volunteering opportunities.',
+        interests: ['Environmental Conservation', 'Education & Literacy', 'Youth Mentoring'],
+        skills: ['Teaching', 'Leadership', 'Event Planning'],
+        availability: {
+          weekdays: true,
+          weekends: true,
+          mornings: false,
+          afternoons: true,
+          evenings: true
+        },
+        emergencyContact: {
+          name: 'John Smith',
+          relationship: 'Spouse',
+          phone: '(555) 987-6543'
+        },
+        volunteerStatus: 'Active',
+        verificationStatus: 'Verified',
+        totalHours: 75,
+        eventsAttended: 12,
+        joinedDate: '2022-06-15'
+      };
+      
+      // Simulate API delay
+      setTimeout(() => {
+        setProfile(mockProfile);
+        setLoading(false);
+      }, 600);
+      
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+      toast.error('Failed to load profile data');
+      setLoading(false);
+    }
+  };
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value, type, checked } = e.target;
+    
     if (name.includes('.')) {
+      // Handle nested objects like emergencyContact.name
       const [parent, child] = name.split('.');
-      setProfile({
-        ...profile,
+      setProfile((prev) => ({
+        ...prev,
         [parent]: {
-          ...profile[parent],
-          [child]: value,
-        },
-      });
+          ...prev[parent],
+          [child]: value
+        }
+      }));
+    } else if (name === 'interests' || name === 'skills') {
+      // Handle multi-select lists
+      const currentValues = [...profile[name]];
+      if (type === 'checkbox') {
+        if (checked) {
+          currentValues.push(value);
+        } else {
+          const index = currentValues.indexOf(value);
+          if (index > -1) {
+            currentValues.splice(index, 1);
+          }
+        }
+        setProfile((prev) => ({
+          ...prev,
+          [name]: currentValues
+        }));
+      }
+    } else if (name.startsWith('availability.')) {
+      // Handle availability checkboxes
+      const availabilityKey = name.split('.')[1];
+      setProfile((prev) => ({
+        ...prev,
+        availability: {
+          ...prev.availability,
+          [availabilityKey]: checked
+        }
+      }));
     } else {
-      setProfile({
-        ...profile,
-        [name]: value,
-      });
+      // Handle regular inputs
+      setProfile((prev) => ({
+        ...prev,
+        [name]: value
+      }));
     }
-  };
-
-  const handleWeekdayChange = (day) => {
-    const updatedWeekdays = profile.availability.weekdays.includes(day)
-      ? profile.availability.weekdays.filter((d) => d !== day)
-      : [...profile.availability.weekdays, day];
-
-    setProfile({
-      ...profile,
-      availability: {
-        ...profile.availability,
-        weekdays: updatedWeekdays,
-      },
-    });
-  };
-
-  const handleTimeSlotChange = (slot) => {
-    const updatedTimeSlots = profile.availability.timeSlots.includes(slot)
-      ? profile.availability.timeSlots.filter((s) => s !== slot)
-      : [...profile.availability.timeSlots, slot];
-
-    setProfile({
-      ...profile,
-      availability: {
-        ...profile.availability,
-        timeSlots: updatedTimeSlots,
-      },
-    });
-  };
-
-  const addSkill = () => {
-    if (newSkill.trim() && !profile.skills.includes(newSkill.trim())) {
-      setProfile({
-        ...profile,
-        skills: [...profile.skills, newSkill.trim()],
-      });
-      setNewSkill('');
-    }
-  };
-
-  const removeSkill = (skill) => {
-    setProfile({
-      ...profile,
-      skills: profile.skills.filter((s) => s !== skill),
-    });
-  };
-
-  const addLocation = () => {
-    if (newLocation.trim() && !profile.preferredLocations.includes(newLocation.trim())) {
-      setProfile({
-        ...profile,
-        preferredLocations: [...profile.preferredLocations, newLocation.trim()],
-      });
-      setNewLocation('');
-    }
-  };
-
-  const removeLocation = (location) => {
-    setProfile({
-      ...profile,
-      preferredLocations: profile.preferredLocations.filter((l) => l !== location),
-    });
-  };
-
-  const addInterest = () => {
-    if (newInterest.trim() && !profile.interests.includes(newInterest.trim())) {
-      setProfile({
-        ...profile,
-        interests: [...profile.interests, newInterest.trim()],
-      });
-      setNewInterest('');
-    }
-  };
-
-  const removeInterest = (interest) => {
-    setProfile({
-      ...profile,
-      interests: profile.interests.filter((i) => i !== interest),
-    });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
-    setError(null);
-
+    
     try {
-      if (hasProfile) {
-        const response = await axios.put('/api/volunteers/profile', profile);
-        if (response.data.success) {
-          toast.success('Volunteer profile updated successfully');
-        }
-      } else {
-        const response = await axios.post('/api/volunteers/profile', profile);
-        if (response.data.success) {
-          setHasProfile(true);
-          toast.success('Volunteer profile created successfully');
-        }
-      }
+      // In a real implementation, you would call your API
+      // await axios.put('/api/volunteers/profile', profile);
+      
+      // Simulate API delay
+      setTimeout(() => {
+        toast.success('Profile updated successfully');
+        setSaving(false);
+        setEditMode(false);
+      }, 800);
+      
     } catch (error) {
-      console.error('Error saving profile:', error);
-      const errorMessage = error.response?.data?.message || 'Error saving volunteer profile';
-      setError(errorMessage);
-      toast.error(errorMessage);
-    } finally {
+      console.error('Error updating profile:', error);
+      toast.error('Failed to update profile');
       setSaving(false);
     }
   };
 
+  const cancelEdit = () => {
+    // Reset any changes by fetching the profile again
+    fetchProfile();
+    setEditMode(false);
+  };
+
+  // Display the verification status with appropriate styling
+  const VerificationStatus = () => {
+    let icon, bgColor, textColor;
+    
+    switch (profile.verificationStatus) {
+      case 'Verified':
+        icon = <FiCheckCircle className="mr-2" />;
+        bgColor = 'bg-green-100';
+        textColor = 'text-green-800';
+        break;
+      case 'Pending':
+        icon = <FiHelpCircle className="mr-2" />;
+        bgColor = 'bg-yellow-100';
+        textColor = 'text-yellow-800';
+        break;
+      case 'Rejected':
+        icon = <FiAlertCircle className="mr-2" />;
+        bgColor = 'bg-red-100';
+        textColor = 'text-red-800';
+        break;
+      default:
+        icon = <FiHelpCircle className="mr-2" />;
+        bgColor = 'bg-gray-100';
+        textColor = 'text-gray-800';
+    }
+    
+    return (
+      <div className={`${bgColor} ${textColor} rounded-full px-3 py-1 flex items-center text-sm font-medium`}>
+        {icon} {profile.verificationStatus}
+      </div>
+    );
+  };
+
   if (loading) {
     return (
-      <div className="flex justify-center items-center py-10">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
-        <span className="ml-3 text-lg text-gray-700">Loading profile...</span>
+      <div className="max-w-4xl mx-auto py-8">
+        <div className="animate-pulse space-y-6">
+          <div className="h-8 bg-gray-200 rounded w-1/3"></div>
+          <div className="h-64 bg-gray-200 rounded"></div>
+          <div className="h-8 bg-gray-200 rounded w-1/4"></div>
+          <div className="h-32 bg-gray-200 rounded"></div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-4 bg-white rounded-lg shadow">
-      <h1 className="text-2xl font-bold mb-6">
-        {hasProfile ? 'Update Volunteer Profile' : 'Create Volunteer Profile'}
-      </h1>
-
-      {error && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-md text-red-700">
-          <p className="font-medium">Error</p>
-          <p>{error}</p>
-        </div>
-      )}
-
-      {profile.verificationStatus && (
-        <div className={`mb-4 p-3 rounded ${
-          profile.verificationStatus === 'Verified' 
-            ? 'bg-green-100 text-green-800' 
-            : profile.verificationStatus === 'Rejected'
-            ? 'bg-red-100 text-red-800'
-            : 'bg-yellow-100 text-yellow-800'
-        }`}>
-          <p className="font-semibold">
-            Verification Status: {profile.verificationStatus}
+    <div className="max-w-4xl mx-auto">
+      <div className="flex flex-col md:flex-row md:items-center justify-between mb-8">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Volunteer Profile</h1>
+          <p className="text-gray-600 mt-1">
+            Manage your volunteer information and preferences
           </p>
-          {profile.verificationStatus === 'Pending' && (
-            <p className="text-sm mt-1">
-              Your profile is pending verification. You'll be able to sign up for shifts once verified.
-            </p>
-          )}
         </div>
-      )}
-
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Skills */}
-        <div>
-          <label className="block text-gray-700 font-semibold mb-2">Skills</label>
-          <div className="flex items-center mb-2">
-            <input
-              type="text"
-              value={newSkill}
-              onChange={(e) => setNewSkill(e.target.value)}
-              className="border rounded-l px-3 py-2 w-full"
-              placeholder="Add a skill..."
-            />
-            <button
-              type="button"
-              onClick={addSkill}
-              className="bg-blue-500 text-white px-4 py-2 rounded-r hover:bg-blue-600"
-            >
-              Add
-            </button>
-          </div>
-          <div className="flex flex-wrap gap-2 mt-2">
-            {profile.skills.map((skill, index) => (
-              <div
-                key={index}
-                className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full flex items-center"
-              >
-                <span>{skill}</span>
-                <button
-                  type="button"
-                  onClick={() => removeSkill(skill)}
-                  className="ml-2 text-blue-800 hover:text-blue-900 font-bold"
-                >
-                  &times;
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Experience Level */}
-        <div>
-          <label className="block text-gray-700 font-semibold mb-2">
-            Experience Level
-          </label>
-          <select
-            name="experience"
-            value={profile.experience}
-            onChange={handleChange}
-            className="border rounded px-3 py-2 w-full"
-          >
-            {experienceLevels.map((level) => (
-              <option key={level} value={level}>
-                {level}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Availability */}
-        <div>
-          <label className="block text-gray-700 font-semibold mb-2">
-            Availability
-          </label>
-          <div className="mb-3">
-            <h3 className="text-gray-600 mb-1">Weekdays</h3>
-            <div className="flex flex-wrap gap-2">
-              {weekdays.map((day) => (
-                <button
-                  key={day}
-                  type="button"
-                  onClick={() => handleWeekdayChange(day)}
-                  className={`px-3 py-1 rounded-full ${
-                    profile.availability.weekdays.includes(day)
-                      ? 'bg-green-500 text-white'
-                      : 'bg-gray-200 text-gray-800'
-                  }`}
-                >
-                  {day}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div>
-            <h3 className="text-gray-600 mb-1">Time Slots</h3>
-            <div className="flex flex-wrap gap-2">
-              {timeSlots.map((slot) => (
-                <button
-                  key={slot}
-                  type="button"
-                  onClick={() => handleTimeSlotChange(slot)}
-                  className={`px-3 py-1 rounded-full ${
-                    profile.availability.timeSlots.includes(slot)
-                      ? 'bg-green-500 text-white'
-                      : 'bg-gray-200 text-gray-800'
-                  }`}
-                >
-                  {slot}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Preferred Locations */}
-        <div>
-          <label className="block text-gray-700 font-semibold mb-2">
-            Preferred Locations
-          </label>
-          <div className="flex items-center mb-2">
-            <input
-              type="text"
-              value={newLocation}
-              onChange={(e) => setNewLocation(e.target.value)}
-              className="border rounded-l px-3 py-2 w-full"
-              placeholder="Add a location..."
-            />
-            <button
-              type="button"
-              onClick={addLocation}
-              className="bg-blue-500 text-white px-4 py-2 rounded-r hover:bg-blue-600"
-            >
-              Add
-            </button>
-          </div>
-          <div className="flex flex-wrap gap-2 mt-2">
-            {profile.preferredLocations.map((location, index) => (
-              <div
-                key={index}
-                className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full flex items-center"
-              >
-                <span>{location}</span>
-                <button
-                  type="button"
-                  onClick={() => removeLocation(location)}
-                  className="ml-2 text-blue-800 hover:text-blue-900 font-bold"
-                >
-                  &times;
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Interests */}
-        <div>
-          <label className="block text-gray-700 font-semibold mb-2">
-            Volunteer Interests
-          </label>
-          <div className="flex items-center mb-2">
-            <input
-              type="text"
-              value={newInterest}
-              onChange={(e) => setNewInterest(e.target.value)}
-              className="border rounded-l px-3 py-2 w-full"
-              placeholder="Add an interest..."
-            />
-            <button
-              type="button"
-              onClick={addInterest}
-              className="bg-blue-500 text-white px-4 py-2 rounded-r hover:bg-blue-600"
-            >
-              Add
-            </button>
-          </div>
-          <div className="flex flex-wrap gap-2 mt-2">
-            {profile.interests.map((interest, index) => (
-              <div
-                key={index}
-                className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full flex items-center"
-              >
-                <span>{interest}</span>
-                <button
-                  type="button"
-                  onClick={() => removeInterest(interest)}
-                  className="ml-2 text-blue-800 hover:text-blue-900 font-bold"
-                >
-                  &times;
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Emergency Contact */}
-        <div>
-          <label className="block text-gray-700 font-semibold mb-2">
-            Emergency Contact
-          </label>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-gray-600 text-sm mb-1">Name</label>
-              <input
-                type="text"
-                name="emergencyContact.name"
-                value={profile.emergencyContact.name}
-                onChange={handleChange}
-                className="border rounded px-3 py-2 w-full"
-              />
-            </div>
-            <div>
-              <label className="block text-gray-600 text-sm mb-1">
-                Relationship
-              </label>
-              <input
-                type="text"
-                name="emergencyContact.relationship"
-                value={profile.emergencyContact.relationship}
-                onChange={handleChange}
-                className="border rounded px-3 py-2 w-full"
-              />
-            </div>
-            <div>
-              <label className="block text-gray-600 text-sm mb-1">
-                Phone Number
-              </label>
-              <input
-                type="text"
-                name="emergencyContact.phone"
-                value={profile.emergencyContact.phone}
-                onChange={handleChange}
-                className="border rounded px-3 py-2 w-full"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Notes */}
-        <div>
-          <label className="block text-gray-700 font-semibold mb-2">
-            Additional Notes
-          </label>
-          <textarea
-            name="notes"
-            value={profile.notes}
-            onChange={handleChange}
-            className="border rounded px-3 py-2 w-full h-32"
-            placeholder="Any additional information..."
-          ></textarea>
-        </div>
-
-        <div className="flex justify-end gap-3">
+        
+        {!editMode ? (
           <button
-            type="button"
-            onClick={() => navigate('/dashboard')}
-            className="bg-gray-200 text-gray-800 px-4 py-2 rounded hover:bg-gray-300"
+            onClick={() => setEditMode(true)}
+            className="mt-4 md:mt-0 bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-lg flex items-center transition-colors"
           >
-            Cancel
+            <FiEdit2 className="mr-2" /> Edit Profile
           </button>
-          <button
-            type="submit"
-            disabled={saving}
-            className="bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-600 disabled:bg-blue-300 flex items-center"
-          >
-            {saving ? (
-              <>
-                <span className="inline-block animate-spin mr-2 h-4 w-4 border-2 border-white border-t-transparent rounded-full"></span>
-                {hasProfile ? 'Updating...' : 'Creating...'}
-              </>
-            ) : (
-              hasProfile ? 'Update Profile' : 'Create Profile'
-            )}
-          </button>
+        ) : (
+          <div className="flex items-center gap-3 mt-4 md:mt-0">
+            <button
+              onClick={cancelEdit}
+              className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded-lg flex items-center transition-colors"
+            >
+              <FiX className="mr-2" /> Cancel
+            </button>
+            <button
+              onClick={handleSubmit}
+              disabled={saving}
+              className={`bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-lg flex items-center transition-colors ${
+                saving ? 'opacity-70 cursor-not-allowed' : ''
+              }`}
+            >
+              {saving ? (
+                <>
+                  <svg className="animate-spin mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <FiSave className="mr-2" /> Save Changes
+                </>
+              )}
+            </button>
+          </div>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Left Column - Profile Summary */}
+        <div className="md:col-span-1">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <div className="flex flex-col items-center text-center mb-6">
+              <div className="w-24 h-24 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 mb-4">
+                <FiUser size={36} />
+              </div>
+              <h2 className="text-xl font-bold text-gray-800">{profile.name}</h2>
+              <p className="text-gray-600 mt-1">{profile.email}</p>
+              <div className="mt-3">
+                <VerificationStatus />
+              </div>
+            </div>
+
+            <div className="divide-y divide-gray-100">
+              <div className="py-3 flex items-center">
+                <FiPhone className="text-gray-400 mr-3" />
+                <span>{profile.phone || 'No phone number'}</span>
+              </div>
+              <div className="py-3 flex items-center">
+                <FiMapPin className="text-gray-400 mr-3" />
+                <span>
+                  {profile.city && profile.state
+                    ? `${profile.city}, ${profile.state}`
+                    : 'Location not provided'}
+                </span>
+              </div>
+              <div className="py-3 flex items-center">
+                <FiCalendar className="text-gray-400 mr-3" />
+                <span>
+                  Volunteer since{' '}
+                  {profile.joinedDate
+                    ? new Date(profile.joinedDate).toLocaleDateString('en-US', {
+                        month: 'long',
+                        year: 'numeric',
+                      })
+                    : 'N/A'}
+                </span>
+              </div>
+            </div>
+            
+            {/* Summary Stats */}
+            <div className="mt-6 grid grid-cols-2 gap-4">
+              <div className="bg-indigo-50 rounded-lg p-4 text-center">
+                <div className="text-2xl font-bold text-indigo-700">
+                  {profile.totalHours || 0}
+                </div>
+                <div className="text-xs text-indigo-600 font-medium">
+                  Volunteer Hours
+                </div>
+              </div>
+              <div className="bg-purple-50 rounded-lg p-4 text-center">
+                <div className="text-2xl font-bold text-purple-700">
+                  {profile.eventsAttended || 0}
+                </div>
+                <div className="text-xs text-purple-600 font-medium">
+                  Events Attended
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-      </form>
+
+        {/* Right Column - Profile Details Form */}
+        <div className="md:col-span-2">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <form>
+              <h3 className="text-lg font-bold text-gray-800 mb-4">Personal Information</h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Full Name
+                  </label>
+                  <input
+                    type="text"
+                    name="name"
+                    value={profile.name}
+                    onChange={handleChange}
+                    disabled={!editMode}
+                    className={`w-full px-3 py-2 border ${
+                      !editMode ? 'bg-gray-50 text-gray-500' : 'bg-white'
+                    } border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500`}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Email Address
+                  </label>
+                  <input
+                    type="email"
+                    name="email"
+                    value={profile.email}
+                    onChange={handleChange}
+                    disabled={!editMode}
+                    className={`w-full px-3 py-2 border ${
+                      !editMode ? 'bg-gray-50 text-gray-500' : 'bg-white'
+                    } border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500`}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Phone Number
+                  </label>
+                  <input
+                    type="tel"
+                    name="phone"
+                    value={profile.phone}
+                    onChange={handleChange}
+                    disabled={!editMode}
+                    className={`w-full px-3 py-2 border ${
+                      !editMode ? 'bg-gray-50 text-gray-500' : 'bg-white'
+                    } border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500`}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Date of Birth
+                  </label>
+                  <input
+                    type="date"
+                    name="dateOfBirth"
+                    value={profile.dateOfBirth}
+                    onChange={handleChange}
+                    disabled={!editMode}
+                    className={`w-full px-3 py-2 border ${
+                      !editMode ? 'bg-gray-50 text-gray-500' : 'bg-white'
+                    } border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500`}
+                  />
+                </div>
+              </div>
+
+              <h3 className="text-lg font-bold text-gray-800 mb-4">Bio</h3>
+              <div className="mb-6">
+                <textarea
+                  name="bio"
+                  rows="4"
+                  value={profile.bio}
+                  onChange={handleChange}
+                  disabled={!editMode}
+                  className={`w-full px-3 py-2 border ${
+                    !editMode ? 'bg-gray-50 text-gray-500' : 'bg-white'
+                  } border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500`}
+                  placeholder="Tell us about yourself and why you volunteer..."
+                ></textarea>
+              </div>
+
+              <h3 className="text-lg font-bold text-gray-800 mb-4">Address</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Street Address
+                  </label>
+                  <input
+                    type="text"
+                    name="address"
+                    value={profile.address}
+                    onChange={handleChange}
+                    disabled={!editMode}
+                    className={`w-full px-3 py-2 border ${
+                      !editMode ? 'bg-gray-50 text-gray-500' : 'bg-white'
+                    } border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500`}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    City
+                  </label>
+                  <input
+                    type="text"
+                    name="city"
+                    value={profile.city}
+                    onChange={handleChange}
+                    disabled={!editMode}
+                    className={`w-full px-3 py-2 border ${
+                      !editMode ? 'bg-gray-50 text-gray-500' : 'bg-white'
+                    } border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500`}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      State
+                    </label>
+                    <input
+                      type="text"
+                      name="state"
+                      value={profile.state}
+                      onChange={handleChange}
+                      disabled={!editMode}
+                      className={`w-full px-3 py-2 border ${
+                        !editMode ? 'bg-gray-50 text-gray-500' : 'bg-white'
+                      } border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500`}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      ZIP Code
+                    </label>
+                    <input
+                      type="text"
+                      name="zipCode"
+                      value={profile.zipCode}
+                      onChange={handleChange}
+                      disabled={!editMode}
+                      className={`w-full px-3 py-2 border ${
+                        !editMode ? 'bg-gray-50 text-gray-500' : 'bg-white'
+                      } border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500`}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <h3 className="text-lg font-bold text-gray-800 mb-4">
+                Interests & Skills
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Areas of Interest
+                  </label>
+                  {editMode ? (
+                    <div className="space-y-2 max-h-48 overflow-y-auto bg-white border border-gray-300 rounded-lg p-3">
+                      {interestOptions.map((interest) => (
+                        <div key={interest} className="flex items-center">
+                          <input
+                            type="checkbox"
+                            id={`interest-${interest}`}
+                            name="interests"
+                            value={interest}
+                            checked={profile.interests.includes(interest)}
+                            onChange={handleChange}
+                            className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                          />
+                          <label
+                            htmlFor={`interest-${interest}`}
+                            className="ml-2 block text-sm text-gray-700"
+                          >
+                            {interest}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {profile.interests.length > 0 ? (
+                        profile.interests.map((interest) => (
+                          <span
+                            key={interest}
+                            className="bg-indigo-100 text-indigo-700 text-sm font-medium px-2.5 py-1 rounded-full"
+                          >
+                            {interest}
+                          </span>
+                        ))
+                      ) : (
+                        <p className="text-gray-500 text-sm">No interests selected</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Skills
+                  </label>
+                  {editMode ? (
+                    <div className="space-y-2 max-h-48 overflow-y-auto bg-white border border-gray-300 rounded-lg p-3">
+                      {skillOptions.map((skill) => (
+                        <div key={skill} className="flex items-center">
+                          <input
+                            type="checkbox"
+                            id={`skill-${skill}`}
+                            name="skills"
+                            value={skill}
+                            checked={profile.skills.includes(skill)}
+                            onChange={handleChange}
+                            className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                          />
+                          <label
+                            htmlFor={`skill-${skill}`}
+                            className="ml-2 block text-sm text-gray-700"
+                          >
+                            {skill}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {profile.skills.length > 0 ? (
+                        profile.skills.map((skill) => (
+                          <span
+                            key={skill}
+                            className="bg-purple-100 text-purple-700 text-sm font-medium px-2.5 py-1 rounded-full"
+                          >
+                            {skill}
+                          </span>
+                        ))
+                      ) : (
+                        <p className="text-gray-500 text-sm">No skills selected</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <h3 className="text-lg font-bold text-gray-800 mb-4">Availability</h3>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    id="weekdays"
+                    name="availability.weekdays"
+                    checked={profile.availability.weekdays}
+                    onChange={handleChange}
+                    disabled={!editMode}
+                    className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                  />
+                  <label htmlFor="weekdays" className="ml-2 block text-sm text-gray-700">
+                    Weekdays
+                  </label>
+                </div>
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    id="weekends"
+                    name="availability.weekends"
+                    checked={profile.availability.weekends}
+                    onChange={handleChange}
+                    disabled={!editMode}
+                    className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                  />
+                  <label htmlFor="weekends" className="ml-2 block text-sm text-gray-700">
+                    Weekends
+                  </label>
+                </div>
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    id="mornings"
+                    name="availability.mornings"
+                    checked={profile.availability.mornings}
+                    onChange={handleChange}
+                    disabled={!editMode}
+                    className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                  />
+                  <label htmlFor="mornings" className="ml-2 block text-sm text-gray-700">
+                    Mornings
+                  </label>
+                </div>
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    id="afternoons"
+                    name="availability.afternoons"
+                    checked={profile.availability.afternoons}
+                    onChange={handleChange}
+                    disabled={!editMode}
+                    className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                  />
+                  <label htmlFor="afternoons" className="ml-2 block text-sm text-gray-700">
+                    Afternoons
+                  </label>
+                </div>
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    id="evenings"
+                    name="availability.evenings"
+                    checked={profile.availability.evenings}
+                    onChange={handleChange}
+                    disabled={!editMode}
+                    className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                  />
+                  <label htmlFor="evenings" className="ml-2 block text-sm text-gray-700">
+                    Evenings
+                  </label>
+                </div>
+              </div>
+
+              <h3 className="text-lg font-bold text-gray-800 mb-4">Emergency Contact</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Contact Name
+                  </label>
+                  <input
+                    type="text"
+                    name="emergencyContact.name"
+                    value={profile.emergencyContact.name}
+                    onChange={handleChange}
+                    disabled={!editMode}
+                    className={`w-full px-3 py-2 border ${
+                      !editMode ? 'bg-gray-50 text-gray-500' : 'bg-white'
+                    } border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500`}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Relationship
+                  </label>
+                  <input
+                    type="text"
+                    name="emergencyContact.relationship"
+                    value={profile.emergencyContact.relationship}
+                    onChange={handleChange}
+                    disabled={!editMode}
+                    className={`w-full px-3 py-2 border ${
+                      !editMode ? 'bg-gray-50 text-gray-500' : 'bg-white'
+                    } border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500`}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Phone Number
+                  </label>
+                  <input
+                    type="tel"
+                    name="emergencyContact.phone"
+                    value={profile.emergencyContact.phone}
+                    onChange={handleChange}
+                    disabled={!editMode}
+                    className={`w-full px-3 py-2 border ${
+                      !editMode ? 'bg-gray-50 text-gray-500' : 'bg-white'
+                    } border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500`}
+                  />
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

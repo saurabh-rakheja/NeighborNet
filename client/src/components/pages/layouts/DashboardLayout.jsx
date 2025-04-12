@@ -7,6 +7,7 @@ import Sidebar from "../dashboard/sidebar";
 function DashboardLayout() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  
   // Check if mobile view
   useEffect(() => {
     const checkMobile = () => {
@@ -30,26 +31,28 @@ function DashboardLayout() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50">
-      {/* Fixed Navigation */}
-      {/* Main Content with Sidebar */}
-      <div className="flex flex-1">
-        {/* Fixed Sidebar - positioned below navbar */}
-        <div className="fixed left-0 top-0 z-30 h-screen">
-          <Sidebar isMobile={isMobile} onToggle={handleSidebarToggle} />
-        </div>
+    <div className="flex h-screen bg-gray-50 overflow-hidden">
+      {/* Sidebar - fixed position */}
+      <div className="fixed left-0 top-0 h-full z-30">
+        <Sidebar isMobile={isMobile} onToggle={handleSidebarToggle} />
+      </div>
 
-        {/* Scrollable Content Area - margin adjusts with sidebar state */}
-        <main
-          className={`flex-1 transition-all duration-300 pt-4 pb-16 ${
-            sidebarCollapsed ? "ml-20" : "ml-64"
-          } md:p-6 p-4`}
-        >
-          <Outlet />
-          <footer className="fixed bottom-0 right-0 w-full">
-            <FooterDashboard />
-          </footer>
+      {/* Main Content Area */}
+      <div
+        className={`flex flex-col flex-1 transition-all duration-300 ${
+          sidebarCollapsed ? "ml-20" : "ml-64"
+        }`}
+      >
+        {/* Main Scrollable Area */}
+        <main className="flex-1 overflow-y-auto">
+          <div className="container mx-auto px-4 py-8">
+            {/* Page Content */}
+            <Outlet />
+          </div>
         </main>
+
+        {/* Footer - sticky at bottom */}
+        <FooterDashboard />
       </div>
     </div>
   );

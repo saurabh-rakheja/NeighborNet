@@ -6,22 +6,22 @@ exports.createVolunteerProfile = async (req, res) => {
   try {
     // Check if volunteer profile already exists for this user
     const existingVolunteer = await Volunteer.findOne({ user: req.user.id });
-    
+
     if (existingVolunteer) {
       return res.status(400).json({
         success: false,
         message: "Volunteer profile already exists for this user",
       });
     }
-    
+
     // Create new volunteer profile
     const volunteerData = {
       user: req.user.id,
       ...req.body,
     };
-    
+
     const volunteer = await Volunteer.create(volunteerData);
-    
+
     res.status(201).json({
       success: true,
       data: volunteer,
@@ -39,14 +39,14 @@ exports.createVolunteerProfile = async (req, res) => {
 exports.getVolunteerProfile = async (req, res) => {
   try {
     const volunteer = await Volunteer.findOne({ user: req.user.id });
-    
+
     if (!volunteer) {
       return res.status(404).json({
         success: false,
         message: "Volunteer profile not found",
       });
     }
-    
+
     res.status(200).json({
       success: true,
       data: volunteer,
@@ -68,14 +68,14 @@ exports.updateVolunteerProfile = async (req, res) => {
       req.body,
       { new: true, runValidators: true }
     );
-    
+
     if (!volunteer) {
       return res.status(404).json({
         success: false,
         message: "Volunteer profile not found",
       });
     }
-    
+
     res.status(200).json({
       success: true,
       data: volunteer,
@@ -96,7 +96,7 @@ exports.getAllVolunteers = async (req, res) => {
       path: "user",
       select: "name email",
     });
-    
+
     res.status(200).json({
       success: true,
       count: volunteers.length,
@@ -115,27 +115,27 @@ exports.getAllVolunteers = async (req, res) => {
 exports.updateVerificationStatus = async (req, res) => {
   try {
     const { volunteerId, verificationStatus } = req.body;
-    
+
     if (!["Pending", "Verified", "Rejected"].includes(verificationStatus)) {
       return res.status(400).json({
         success: false,
         message: "Invalid verification status",
       });
     }
-    
+
     const volunteer = await Volunteer.findByIdAndUpdate(
       volunteerId,
       { verificationStatus },
       { new: true, runValidators: true }
     );
-    
+
     if (!volunteer) {
       return res.status(404).json({
         success: false,
         message: "Volunteer not found",
       });
     }
-    
+
     res.status(200).json({
       success: true,
       data: volunteer,
@@ -147,4 +147,4 @@ exports.updateVerificationStatus = async (req, res) => {
       message: "Internal server error",
     });
   }
-}; 
+};

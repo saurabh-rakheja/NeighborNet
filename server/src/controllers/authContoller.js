@@ -11,27 +11,30 @@ exports.register = async (req, res) => {
     const { name, email, password, role, organization } = req.body;
 
     // Check if user already exists via email
-    let user = await User.findOne({ email });
-    if (user) {
-      return res.status(400).json({ success: false, message: "User already exists" });
+    let existingUser = await User.findOne({ email });
+
+    if (existingUser) {
+      return res
+        .status(400)
+        .json({ success: false, message: "User already exists" });
     }
 
     // Validate NGO registration
-    if (role === 'ngo' && !organization) {
-      return res.status(400).json({ success: false, message: "Organization name is required for NGO accounts" });
+    if (role === "ngo" && !organization) {
+      // Use name as organization name if not provided
+      req.body.organization = name;
     }
 
     // Create new user
-    user = new User({
+    const userData = {
       name,
       email,
       password,
-      role: role || 'volunteer', // Default to volunteer if not specified
-      ...(organization && { organization }), // Add organization if provided
-    });
+      role: role || "volunteer",
+      ...(organization && { organization }),
+    };
 
-    // Hash password via pre-save middleware
-    await user.save();
+    const user = await User.create(userData);
 
     // Generate JWT
     const token = jwt.sign(
@@ -53,7 +56,9 @@ exports.register = async (req, res) => {
     });
   } catch (error) {
     console.error("Error in register:", error);
-    res.status(500).json({ success: false, message: error.message || "Server error" });
+    res
+      .status(500)
+      .json({ success: false, message: error.message || "Server error" });
   }
 };
 
@@ -65,16 +70,42 @@ exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Check if user exists
+    // Find user by email
     const user = await User.findOne({ email }).select("+password");
+
     if (!user) {
-      return res.status(400).json({ success: false, message: "Invalid credentials" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid credentials" });
+    }
+
+    // Check if account is locked
+    if (user.isLocked && user.isLocked()) {
+      return res.status(401).json({
+        success: false,
+        message:
+          "Account is locked due to too many failed login attempts. Try again later.",
+      });
     }
 
     // Check password
-    const isMatch = await user.comparePassword(password);
+    const isMatch = await user.matchPassword(password);
     if (!isMatch) {
-      return res.status(400).json({ success: false, message: "Invalid credentials" });
+      // Increment login attempts if the method exists
+      if (user.incrementLoginAttempts) {
+        await user.incrementLoginAttempts();
+      }
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid credentials" });
+    }
+
+    // Reset login attempts if they exist
+    if (user.loginAttempts > 0) {
+      await User.updateOne(
+        { _id: user._id },
+        { $set: { loginAttempts: 0 }, $unset: { lockUntil: 1 } }
+      );
     }
 
     // Generate JWT
@@ -109,30 +140,33 @@ exports.registerNGO = async (req, res) => {
     const { name, email, password, organization } = req.body;
 
     // Check required fields
-    if (!name || !email || !password || !organization) {
-      return res.status(400).json({ 
-        success: false, 
-        message: "Please provide name, email, password, and organization"
+    if (!name || !email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide name, email, and password",
       });
     }
 
+    // Use name as organization if not provided
+    const orgName = organization || name;
+
     // Check if user already exists via email
-    let user = await User.findOne({ email });
-    if (user) {
-      return res.status(400).json({ success: false, message: "User already exists" });
+    let existingUser = await User.findOne({ email });
+
+    if (existingUser) {
+      return res
+        .status(400)
+        .json({ success: false, message: "User already exists" });
     }
 
     // Create new NGO user
-    user = new User({
+    const user = await User.create({
       name,
       email,
       password,
-      role: 'ngo',
-      organization,
+      role: "ngo",
+      organization: orgName,
     });
-
-    // Hash password via pre-save middleware
-    await user.save();
 
     // Generate JWT
     const token = jwt.sign(
@@ -154,11 +188,13 @@ exports.registerNGO = async (req, res) => {
     });
   } catch (error) {
     console.error("Error in registerNGO:", error);
-    res.status(500).json({ success: false, message: error.message || "Server error" });
+    res
+      .status(500)
+      .json({ success: false, message: error.message || "Server error" });
   }
 };
 
-// @desc    Register as Volunteer 
+// @desc    Register as Volunteer
 // @route   POST /api/auth/register-volunteer
 // @access  Public
 exports.registerVolunteer = async (req, res) => {
@@ -167,28 +203,28 @@ exports.registerVolunteer = async (req, res) => {
 
     // Check required fields
     if (!name || !email || !password) {
-      return res.status(400).json({ 
-        success: false, 
-        message: "Please provide name, email, and password"
+      return res.status(400).json({
+        success: false,
+        message: "Please provide name, email, and password",
       });
     }
 
     // Check if user already exists via email
-    let user = await User.findOne({ email });
-    if (user) {
-      return res.status(400).json({ success: false, message: "User already exists" });
+    let existingUser = await User.findOne({ email });
+
+    if (existingUser) {
+      return res
+        .status(400)
+        .json({ success: false, message: "User already exists" });
     }
 
     // Create new volunteer user
-    user = new User({
+    const user = await User.create({
       name,
       email,
       password,
-      role: 'volunteer',
+      role: "volunteer",
     });
-
-    // Hash password via pre-save middleware
-    await user.save();
 
     // Generate JWT
     const token = jwt.sign(
@@ -209,7 +245,77 @@ exports.registerVolunteer = async (req, res) => {
     });
   } catch (error) {
     console.error("Error in registerVolunteer:", error);
-    res.status(500).json({ success: false, message: error.message || "Server error" });
+    res
+      .status(500)
+      .json({ success: false, message: error.message || "Server error" });
+  }
+};
+
+// @desc    Register as Admin (only accessible by superadmin)
+// @route   POST /api/auth/register-admin
+// @access  Private (superadmin only)
+exports.registerAdmin = async (req, res) => {
+  try {
+    const { name, email, password, department, permissions } = req.body;
+
+    // Check required fields
+    if (!name || !email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide name, email, and password",
+      });
+    }
+
+    // Check if the requesting user is a superadmin (this route should be protected)
+    if (req.user.role !== "superadmin") {
+      return res.status(403).json({
+        success: false,
+        message: "Only superadmins can create admin accounts",
+      });
+    }
+
+    // Check if user already exists via email
+    let existingUser = await User.findOne({ email });
+
+    if (existingUser) {
+      return res
+        .status(400)
+        .json({ success: false, message: "User already exists" });
+    }
+
+    // Create new admin user
+    const user = await User.create({
+      name,
+      email,
+      password,
+      role: "admin",
+      department: department || "Support",
+      permissions: permissions || {},
+    });
+
+    // Generate JWT
+    const token = jwt.sign(
+      { id: user._id, role: user.role, version: user.tokenVersion },
+      process.env.JWT_SECRET,
+      { expiresIn: process.env.JWT_EXPIRES_IN || "30d" }
+    );
+
+    res.status(201).json({
+      success: true,
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        department: user.department,
+      },
+    });
+  } catch (error) {
+    console.error("Error in registerAdmin:", error);
+    res
+      .status(500)
+      .json({ success: false, message: error.message || "Server error" });
   }
 };
 
@@ -219,12 +325,31 @@ exports.registerVolunteer = async (req, res) => {
 // @access  Public
 exports.forgotPassword = async (req, res) => {
   try {
-    const { email } = req.body;
+    const { email, userType } = req.body;
 
-    // Check if user exists
-    const user = await User.findOne({ email });
+    if (!email || !userType) {
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "Please provide email and user type",
+        });
+    }
+
+    // Find user based on model type
+    let user;
+    if (userType === "volunteer") {
+      user = await User.findOne({ email });
+    } else if (userType === "ngo") {
+      user = await User.findOne({ email });
+    } else if (userType === "admin") {
+      user = await User.findOne({ email });
+    }
+
     if (!user) {
-      return res.status(404).json({ success: false, message: "User not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
     }
 
     // Generate password reset token
@@ -237,7 +362,7 @@ exports.forgotPassword = async (req, res) => {
     res.status(200).json({
       success: true,
       message: "Password reset token sent to email",
-      resetToken,
+      resetToken, // Remove in production
     });
   } catch (error) {
     console.error("Error in forgotPassword:", error);
@@ -251,19 +376,43 @@ exports.forgotPassword = async (req, res) => {
 exports.resetPassword = async (req, res) => {
   try {
     const { token } = req.params;
-    const { password } = req.body;
+    const { password, userType } = req.body;
+
+    if (!password || !userType) {
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "Please provide password and user type",
+        });
+    }
 
     // Hash the token to compare with stored token
     const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
 
-    // Find user by reset token and check expiration
-    const user = await User.findOne({
-      passwordResetToken: hashedToken,
-      passwordResetExpires: { $gt: Date.now() },
-    });
+    // Find user by reset token and check expiration based on model type
+    let user;
+    if (userType === "volunteer") {
+      user = await User.findOne({
+        passwordResetToken: hashedToken,
+        passwordResetExpires: { $gt: Date.now() },
+      });
+    } else if (userType === "ngo") {
+      user = await User.findOne({
+        passwordResetToken: hashedToken,
+        passwordResetExpires: { $gt: Date.now() },
+      });
+    } else if (userType === "admin") {
+      user = await User.findOne({
+        passwordResetToken: hashedToken,
+        passwordResetExpires: { $gt: Date.now() },
+      });
+    }
 
     if (!user) {
-      return res.status(400).json({ success: false, message: "Invalid or expired token" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid or expired token" });
     }
 
     // Update password and clear reset token
@@ -272,7 +421,9 @@ exports.resetPassword = async (req, res) => {
     user.passwordResetExpires = undefined;
     await user.save();
 
-    res.status(200).json({ success: true, message: "Password reset successful" });
+    res
+      .status(200)
+      .json({ success: true, message: "Password reset successful" });
   } catch (error) {
     console.error("Error in resetPassword:", error);
     res.status(500).json({ success: false, message: "Server error" });
@@ -284,13 +435,10 @@ exports.resetPassword = async (req, res) => {
 // @access  Private
 exports.getMe = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).select("-password");
-    if (!user) {
-      return res.status(404).json({ success: false, message: "User not found" });
-    }
+    // User is already attached to request by the authenticateUser middleware
     res.json({
       success: true,
-      data: user
+      data: req.user,
     });
   } catch (error) {
     console.error("Error in getMe:", error);
@@ -303,29 +451,29 @@ exports.getMe = async (req, res) => {
 // @access  Private
 exports.updateMe = async (req, res) => {
   try {
-    const { name, email, organization } = req.body;
-    
-    // Set fields to update
+    const { name, email } = req.body;
+    const userId = req.user.id;
+
+    // Base fields to update for all user types
     const updateFields = { name, email };
-    
-    // For NGO users, allow updating organization
-    if (req.user.role === 'ngo' && organization) {
-      updateFields.organization = organization;
-    }
 
-    const user = await User.findByIdAndUpdate(
-      req.user.id,
-      updateFields,
-      { new: true, runValidators: true }
-    ).select("-password");
+    // Update specific fields based on user type
+    let updatedUser;
 
-    if (!user) {
-      return res.status(404).json({ success: false, message: "User not found" });
+    updatedUser = await User.findByIdAndUpdate(userId, updateFields, {
+      new: true,
+      runValidators: true,
+    }).select("-password");
+
+    if (!updatedUser) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
     }
 
     res.json({
       success: true,
-      data: user
+      data: updatedUser,
     });
   } catch (error) {
     console.error("Error in updateMe:", error);
@@ -333,22 +481,28 @@ exports.updateMe = async (req, res) => {
   }
 };
 
-// @desc    Delete current user's account
-// @route   DELETE /api/auth/delete-me
+// @desc    Delete current user (soft delete by setting active to false)
+// @route   DELETE /api/auth/me
 // @access  Private
 exports.deleteMe = async (req, res) => {
   try {
+    const userId = req.user.id;
+
     const user = await User.findByIdAndUpdate(
-      req.user.id,
+      userId,
       { active: false },
       { new: true }
     );
 
     if (!user) {
-      return res.status(404).json({ success: false, message: "User not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
     }
 
-    res.status(204).json({ success: true, message: "User deactivated successfully" });
+    res
+      .status(204)
+      .json({ success: true, message: "User deactivated successfully" });
   } catch (error) {
     console.error("Error in deleteMe:", error);
     res.status(500).json({ success: false, message: "Server error" });

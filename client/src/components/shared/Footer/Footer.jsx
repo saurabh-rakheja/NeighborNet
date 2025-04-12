@@ -10,21 +10,58 @@ import {
   FiPhone,
   FiArrowRight,
   FiHeart,
+  FiCheck,
+  FiGlobe,
 } from "react-icons/fi";
 
 const Footer = () => {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="bg-gray-50 border-t border-gray-200">
-      <div className="container mx-auto px-4 py-12 md:py-16">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 md:gap-12">
+    <footer className="bg-gray-900 text-white">
+      <div className="container mx-auto px-6 py-16">
+        {/* Top section with Newsletter */}
+        <div className="max-w-4xl mx-auto bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl p-8 mb-16 shadow-xl relative overflow-hidden">
+          <div className="absolute inset-0 opacity-10">
+            <div className="absolute -right-10 -top-10 w-40 h-40 bg-white rounded-full"></div>
+            <div className="absolute -left-20 -bottom-20 w-80 h-80 bg-white rounded-full"></div>
+          </div>
+          
+          <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
+            <div className="md:w-1/2">
+              <h3 className="text-2xl font-bold mb-2">Stay Updated</h3>
+              <p className="text-white/80 mb-0">
+                Get the latest volunteer opportunities and community updates.
+              </p>
+            </div>
+            <div className="md:w-1/2 w-full">
+              <form className="flex flex-col sm:flex-row gap-2">
+                <input
+                  type="email"
+                  placeholder="Your email address"
+                  className="flex-grow pl-4 pr-4 py-3 bg-white/10 border border-white/20 rounded-xl backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-white/30 text-white placeholder-white/60"
+                  required
+                />
+                <button
+                  type="submit"
+                  className="whitespace-nowrap bg-white text-indigo-700 rounded-xl px-5 py-3 font-medium hover:bg-indigo-50 transition-colors"
+                >
+                  Subscribe
+                  <FiArrowRight className="ml-2 inline" />
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+
+        {/* Main Footer Content */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10 mb-16">
           {/* Column 1 - About */}
           <div className="space-y-4">
             <Link to="/" className="flex items-center space-x-2">
-              <div className="h-10 w-10 bg-indigo-600 rounded-lg flex items-center justify-center shadow-md shadow-indigo-200">
+              <div className="h-10 w-10 bg-white rounded-lg flex items-center justify-center">
                 <svg
-                  className="w-6 h-6 text-white"
+                  className="w-6 h-6 text-indigo-600"
                   xmlns="http://www.w3.org/2000/svg"
                   fill="none"
                   viewBox="0 0 24 24"
@@ -38,12 +75,12 @@ const Footer = () => {
                   />
                 </svg>
               </div>
-              <span className="text-xl font-bold text-gray-800">
-                NeighborNet{" "}
+              <span className="text-xl font-bold text-white">
+                NeighborNet
               </span>
             </Link>
-            <p className="text-gray-600 text-sm leading-relaxed">
-              We connect passionate volunteers with meaningful opportunities to
+            <p className="text-gray-300 leading-relaxed">
+              Connecting passionate volunteers with meaningful opportunities to
               make a difference in their communities.
             </p>
             <div className="flex space-x-4 pt-2">
@@ -51,194 +88,193 @@ const Footer = () => {
                 href="https://facebook.com"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-gray-400 hover:text-indigo-600 transition-colors"
+                className="text-gray-400 hover:text-white transition-colors"
+                aria-label="Facebook"
               >
                 <FiFacebook size={20} />
-                <span className="sr-only">Facebook</span>
               </a>
               <a
                 href="https://twitter.com"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-gray-400 hover:text-indigo-600 transition-colors"
+                className="text-gray-400 hover:text-white transition-colors"
+                aria-label="Twitter"
               >
                 <FiTwitter size={20} />
-                <span className="sr-only">Twitter</span>
               </a>
               <a
                 href="https://instagram.com"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-gray-400 hover:text-indigo-600 transition-colors"
+                className="text-gray-400 hover:text-white transition-colors"
+                aria-label="Instagram"
               >
                 <FiInstagram size={20} />
-                <span className="sr-only">Instagram</span>
               </a>
               <a
                 href="https://linkedin.com"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-gray-400 hover:text-indigo-600 transition-colors"
+                className="text-gray-400 hover:text-white transition-colors"
+                aria-label="LinkedIn"
               >
                 <FiLinkedin size={20} />
-                <span className="sr-only">LinkedIn</span>
               </a>
             </div>
           </div>
 
           {/* Column 2 - Quick Links */}
           <div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">
+            <h3 className="text-lg font-semibold text-white mb-5 pb-2 border-b border-gray-700">
               Quick Links
             </h3>
-            <ul className="space-y-2">
+            <ul className="space-y-3">
               <li>
                 <Link
                   to="/about"
-                  className="text-gray-600 hover:text-indigo-600 text-sm hover:underline transition-colors"
+                  className="text-gray-300 hover:text-white flex items-center group"
                 >
+                  <FiArrowRight className="mr-2 opacity-0 group-hover:opacity-100 transition-opacity" size={14} />
                   About Us
                 </Link>
               </li>
               <li>
                 <Link
                   to="/events"
-                  className="text-gray-600 hover:text-indigo-600 text-sm hover:underline transition-colors"
+                  className="text-gray-300 hover:text-white flex items-center group"
                 >
+                  <FiArrowRight className="mr-2 opacity-0 group-hover:opacity-100 transition-opacity" size={14} />
                   Find Events
                 </Link>
               </li>
               <li>
                 <Link
                   to="/calendar"
-                  className="text-gray-600 hover:text-indigo-600 text-sm hover:underline transition-colors"
+                  className="text-gray-300 hover:text-white flex items-center group"
                 >
+                  <FiArrowRight className="mr-2 opacity-0 group-hover:opacity-100 transition-opacity" size={14} />
                   Calendar
                 </Link>
               </li>
               <li>
                 <Link
                   to="/resources"
-                  className="text-gray-600 hover:text-indigo-600 text-sm hover:underline transition-colors"
+                  className="text-gray-300 hover:text-white flex items-center group"
                 >
+                  <FiArrowRight className="mr-2 opacity-0 group-hover:opacity-100 transition-opacity" size={14} />
                   Resources
                 </Link>
               </li>
               <li>
                 <Link
                   to="/faq"
-                  className="text-gray-600 hover:text-indigo-600 text-sm hover:underline transition-colors"
+                  className="text-gray-300 hover:text-white flex items-center group"
                 >
+                  <FiArrowRight className="mr-2 opacity-0 group-hover:opacity-100 transition-opacity" size={14} />
                   FAQ
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/contact"
-                  className="text-gray-600 hover:text-indigo-600 text-sm hover:underline transition-colors"
-                >
-                  Contact Us
                 </Link>
               </li>
             </ul>
           </div>
 
-          {/* Column 3 - Contact Us */}
+          {/* Column 3 - Features */}
           <div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">
-              Contact Us
+            <h3 className="text-lg font-semibold text-white mb-5 pb-2 border-b border-gray-700">
+              Features
             </h3>
             <ul className="space-y-3">
+              <li className="flex items-start space-x-2">
+                <FiCheck className="text-green-400 mt-1 flex-shrink-0" />
+                <span className="text-gray-300">Volunteer tracking</span>
+              </li>
+              <li className="flex items-start space-x-2">
+                <FiCheck className="text-green-400 mt-1 flex-shrink-0" />
+                <span className="text-gray-300">Event management</span>
+              </li>
+              <li className="flex items-start space-x-2">
+                <FiCheck className="text-green-400 mt-1 flex-shrink-0" />
+                <span className="text-gray-300">Impact reporting</span>
+              </li>
+              <li className="flex items-start space-x-2">
+                <FiCheck className="text-green-400 mt-1 flex-shrink-0" />
+                <span className="text-gray-300">Skill matching</span>
+              </li>
+              <li className="flex items-start space-x-2">
+                <FiCheck className="text-green-400 mt-1 flex-shrink-0" />
+                <span className="text-gray-300">Community networking</span>
+              </li>
+            </ul>
+          </div>
+
+          {/* Column 4 - Contact Us */}
+          <div>
+            <h3 className="text-lg font-semibold text-white mb-5 pb-2 border-b border-gray-700">
+              Contact Us
+            </h3>
+            <ul className="space-y-4">
               <li className="flex items-start space-x-3">
-                <FiMapPin className="text-indigo-600 mt-0.5" />
-                <span className="text-gray-600 text-sm">
+                <FiMapPin className="text-indigo-400 mt-1 flex-shrink-0" />
+                <span className="text-gray-300">
                   123 Volunteer Street, Community City, State 12345
                 </span>
               </li>
               <li className="flex items-center space-x-3">
-                <FiPhone className="text-indigo-600" />
-                <span className="text-gray-600 text-sm">(123) 456-7890</span>
+                <FiPhone className="text-indigo-400 flex-shrink-0" />
+                <span className="text-gray-300">(123) 456-7890</span>
               </li>
               <li className="flex items-center space-x-3">
-                <FiMail className="text-indigo-600" />
+                <FiMail className="text-indigo-400 flex-shrink-0" />
                 <a
-                  href="mailto:info@NeighborNet.org"
-                  className="text-gray-600 text-sm hover:text-indigo-600 hover:underline transition-colors"
+                  href="mailto:info@neighbornet.org"
+                  className="text-gray-300 hover:text-white transition-colors"
                 >
-                  info@NeighborNet.org
+                  info@neighbornet.org
+                </a>
+              </li>
+              <li className="flex items-center space-x-3">
+                <FiGlobe className="text-indigo-400 flex-shrink-0" />
+                <a
+                  href="https://neighbornet.org"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-gray-300 hover:text-white transition-colors"
+                >
+                  www.neighbornet.org
                 </a>
               </li>
             </ul>
           </div>
-
-          {/* Column 4 - Newsletter */}
-          <div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">
-              Stay Updated
-            </h3>
-            <p className="text-gray-600 text-sm mb-4">
-              Subscribe to our newsletter for the latest volunteer opportunities
-              and community updates.
-            </p>
-            <form className="space-y-2">
-              <div className="relative">
-                <input
-                  type="email"
-                  placeholder="Your email address"
-                  className="w-full pl-4 pr-12 py-3 bg-white border border-gray-200 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
-                  required
-                />
-                <button
-                  type="submit"
-                  className="absolute right-1.5 top-1.5 bottom-1.5 bg-indigo-600 text-white rounded-md px-2.5 flex items-center justify-center hover:bg-indigo-700 transition-colors"
-                >
-                  <FiArrowRight />
-                  <span className="sr-only">Subscribe</span>
-                </button>
-              </div>
-              <p className="text-xs text-gray-500">
-                By subscribing, you agree to our{" "}
-                <Link
-                  to="/privacy-policy"
-                  className="text-indigo-600 hover:underline"
-                >
-                  Privacy Policy
-                </Link>
-                .
-              </p>
-            </form>
-          </div>
         </div>
 
         {/* Bottom Bar */}
-        <div className="border-t border-gray-200 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center">
-          <p className="text-gray-500 text-sm">
+        <div className="border-t border-gray-800 pt-8 flex flex-col md:flex-row justify-between items-center">
+          <p className="text-gray-400 text-sm">
             &copy; {year} NeighborNet. All rights reserved.
           </p>
-          <div className="flex items-center space-x-6 mt-4 md:mt-0">
+          <div className="flex items-center flex-wrap justify-center gap-6 mt-4 md:mt-0">
             <Link
               to="/privacy-policy"
-              className="text-gray-500 hover:text-indigo-600 text-sm transition-colors"
+              className="text-gray-400 hover:text-white text-sm transition-colors"
             >
               Privacy Policy
             </Link>
             <Link
               to="/terms-of-service"
-              className="text-gray-500 hover:text-indigo-600 text-sm transition-colors"
+              className="text-gray-400 hover:text-white text-sm transition-colors"
             >
               Terms of Service
             </Link>
             <Link
               to="/accessibility"
-              className="text-gray-500 hover:text-indigo-600 text-sm transition-colors"
+              className="text-gray-400 hover:text-white text-sm transition-colors"
             >
               Accessibility
             </Link>
-          </div>
-          <div className="mt-4 md:mt-0 flex items-center text-gray-500 text-sm">
-            <span>Made with</span>
-            <FiHeart className="mx-1 text-red-500" />
-            <span>for volunteers</span>
+            <div className="flex items-center text-gray-400 text-sm">
+              <span>Made with</span>
+              <FiHeart className="mx-1 text-red-400" />
+              <span>for volunteers</span>
+            </div>
           </div>
         </div>
       </div>

@@ -1,12 +1,12 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import useAuthStore from "../../../store/authStore"; // Add this import
+import useAuthStore from "../../../store/authStore";
 import {
-  FiMail,
-  FiLock,
-  FiUser,
   FiCheckSquare,
   FiArrowRight,
+  FiAlertCircle,
+  FiUser,
+  FiBriefcase,
 } from "react-icons/fi";
 
 const Register = () => {
@@ -15,24 +15,67 @@ const Register = () => {
     email: "",
     password: "",
     confirmPassword: "",
+    role: "",
+    organization: "",
     agreeToTerms: false,
   });
 
-  const [errors, setErrors] = useState({}); // Add this for validation errors
+  const [errors, setErrors] = useState({});
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Zustand store
-  const { loading, error, register, isAuthenticated } = useAuthStore();
+  // Get auth store
+  const { isLoading, error, register, isAuthenticated, clearError } =
+    useAuthStore();
+
+  // Clear errors when component mounts or unmounts
+  useEffect(() => {
+    clearError();
+    return () => clearError();
+  }, [clearError]);
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      const from = location.state?.from || "/dashboard";
+      navigate(from, { replace: true });
+    }
+  }, [isAuthenticated, navigate, location.state]);
 
   const handleChange = (e) => {
     const value =
       e.target.type === "checkbox" ? e.target.checked : e.target.value;
-    setFormData({ ...formData, [e.target.name]: value });
+
+    // If name is being updated and user is an NGO, update organization name too
+    if (e.target.name === "name" && formData.role === "ngo") {
+      setFormData((prev) => ({
+        ...prev,
+        [e.target.name]: value,
+        organization: value,
+      }));
+    } else {
+      setFormData({ ...formData, [e.target.name]: value });
+    }
 
     // Clear validation error when field is modified
     if (errors[e.target.name]) {
       setErrors((prev) => ({ ...prev, [e.target.name]: null }));
+    }
+  };
+
+  // Handle role selection with special logic for NGO
+  const handleRoleSelect = (role) => {
+    if (role === "ngo") {
+      // When selecting NGO, use the name as organization name
+      setFormData({ ...formData, role, organization: formData.name });
+    } else {
+      // For volunteer, clear organization field
+      setFormData({ ...formData, role, organization: "" });
+    }
+
+    // Clear role error if exists
+    if (errors.role) {
+      setErrors((prev) => ({ ...prev, role: null }));
     }
   };
 
@@ -42,6 +85,10 @@ const Register = () => {
     // Name validation
     if (!formData.name.trim()) {
       newErrors.name = "Name is required";
+    } else if (formData.name.length < 2) {
+      newErrors.name = "Name must be at least 2 characters";
+    } else if (/[<>'"&]/.test(formData.name)) {
+      newErrors.name = "Name contains invalid characters";
     }
 
     // Email validation
@@ -56,12 +103,22 @@ const Register = () => {
       newErrors.password = "Password is required";
     } else if (formData.password.length < 8) {
       newErrors.password = "Password must be at least 8 characters";
+    } else if (!/(?=.*\d)(?=.*[a-z])(?=.*[A-Z])/.test(formData.password)) {
+      newErrors.password =
+        "Password must contain at least one uppercase letter, one lowercase letter, and one number";
     }
 
     // Confirm password validation
     if (formData.password !== formData.confirmPassword) {
       newErrors.confirmPassword = "Passwords don't match";
     }
+
+    // Role validation
+    if (!formData.role) {
+      newErrors.role = "Please select a role";
+    }
+
+    // Organization validation is automatic for NGO
 
     // Terms agreement validation
     if (!formData.agreeToTerms) {
@@ -74,31 +131,69 @@ const Register = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    clearError();
+
+    // For NGO role, ensure organization name is set to name if empty
+    if (formData.role === "ngo" && !formData.organization.trim()) {
+      setFormData((prev) => ({ ...prev, organization: prev.name }));
+    }
 
     if (!validateForm()) {
       return;
     }
 
     try {
-      // Call the register action from the store
+      // Log form data before submission for debugging
+      console.log("Submitting registration data:", {
+        ...formData,
+        password: "[REDACTED]",
+        confirmPassword: "[REDACTED]",
+      });
+
+      // Submit with consolidated data
       const response = await register(formData);
 
-      // After successful registration, navigate to dashboard or previous attempted page
-      if (response && response.message === "success") {
-        const from = location.state?.from || "/dashboard";
-        navigate(from, { replace: true });
+      if (response.success) {
+        // Navigation is handled by the effect above
+        console.log("Registration successful", response);
+      } else {
+        console.error("Registration failed:", response.message);
+        // Error will be shown from the authStore error state
       }
     } catch (error) {
-      // Error handling is already managed by the store
-      console.error("Registration failed:", error);
+      console.error("Registration error:", error);
+      // Set a local error if the global error state doesn't capture it
+      if (!error) {
+        setErrors((prev) => ({
+          ...prev,
+          form: "An unexpected error occurred. Please check your network connection and try again.",
+        }));
+      }
     }
   };
 
-  React.useEffect(() => {
-    if (isAuthenticated) {
-      navigate("/dashboard");
+  // Determine labels and placeholders based on role
+  const getFieldConfig = () => {
+    if (formData.role === "ngo") {
+      return {
+        nameLabel: "Organization Name",
+        namePlaceholder: "Enter your organization name",
+        emailLabel: "Organization Email",
+        emailPlaceholder: "org@example.com",
+        createButtonText: "Create Organization Account",
+      };
+    } else {
+      return {
+        nameLabel: "Full Name",
+        namePlaceholder: "Enter your full name",
+        emailLabel: "Email Address",
+        emailPlaceholder: "name@example.com",
+        createButtonText: "Create Volunteer Account",
+      };
     }
-  }, [isAuthenticated, navigate]);
+  };
+
+  const fieldConfig = getFieldConfig();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex flex-col md:flex-row">
@@ -108,9 +203,9 @@ const Register = () => {
 
       {/* Left side - Form */}
       <div className="w-full md:w-1/2 flex items-center justify-center p-8 md:p-16 relative z-10">
-        <div className="w-full max-w-lg bg-white/70 backdrop-blur-md rounded-2xl shadow-xl p-8 border border-gray-100">
+        <div className="w-full max-w-md bg-white/70 backdrop-blur-md rounded-2xl shadow-xl p-8 border border-gray-100">
           <div className="mb-8 text-center">
-            <div className="mx-auto w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center mb-4 shadow-lg shadow-indigo-200">
+            <div className="mx-auto w-12 h-12 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-xl flex items-center justify-center mb-4 shadow-lg">
               <svg
                 className="w-7 h-7 text-white"
                 xmlns="http://www.w3.org/2000/svg"
@@ -126,18 +221,27 @@ const Register = () => {
                 />
               </svg>
             </div>
-            <h1 className="text-3xl font-extrabold text-gray-800 mb-3 tracking-tight">
+            <h1 className="text-4xl font-extrabold text-gray-800 mb-3 tracking-tight">
               Create Your Account
             </h1>
             <p className="text-gray-600">
-              Join our volunteer community and start making a difference
+              {formData.role === "ngo"
+                ? "Register your organization to find dedicated volunteers"
+                : "Join our volunteer community and start making a difference"}
             </p>
           </div>
 
           {error && (
             <div className="mb-6 p-4 bg-red-50/80 backdrop-blur-sm text-red-600 text-sm rounded-xl border border-red-200 flex items-start animate-fadeIn">
-              <span className="mr-2">⚠️</span>
+              <FiAlertCircle className="mr-2 flex-shrink-0 mt-0.5" />
               <span>{error}</span>
+            </div>
+          )}
+
+          {errors.form && (
+            <div className="mb-6 p-4 bg-red-50/80 backdrop-blur-sm text-red-600 text-sm rounded-xl border border-red-200 flex items-start animate-fadeIn">
+              <FiAlertCircle className="mr-2 flex-shrink-0 mt-0.5" />
+              <span>{errors.form}</span>
             </div>
           )}
 
@@ -147,22 +251,19 @@ const Register = () => {
                 htmlFor="name"
                 className="block text-sm font-medium text-gray-700 mb-2"
               >
-                Full Name
+                {fieldConfig.nameLabel}
               </label>
               <div className="relative group">
-                <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-indigo-500 transition-colors duration-200">
-                  <FiUser size={18} />
-                </div>
                 <input
                   type="text"
                   id="name"
                   name="name"
                   value={formData.name}
                   onChange={handleChange}
-                  className={`w-full pl-10 pr-4 py-3.5 border ${
+                  className={`w-full px-4 py-3.5 border ${
                     errors.name ? "border-red-500" : "border-gray-200"
                   } bg-white/70 backdrop-blur-sm rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200`}
-                  placeholder="Your full name"
+                  placeholder={fieldConfig.namePlaceholder}
                 />
               </div>
               {errors.name && (
@@ -175,22 +276,19 @@ const Register = () => {
                 htmlFor="email"
                 className="block text-sm font-medium text-gray-700 mb-2"
               >
-                Email Address
+                {fieldConfig.emailLabel}
               </label>
               <div className="relative group">
-                <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-indigo-500 transition-colors duration-200">
-                  <FiMail size={18} />
-                </div>
                 <input
                   type="email"
                   id="email"
                   name="email"
                   value={formData.email}
                   onChange={handleChange}
-                  className={`w-full pl-10 pr-4 py-3.5 border ${
+                  className={`w-full px-4 py-3.5 border ${
                     errors.email ? "border-red-500" : "border-gray-200"
                   } bg-white/70 backdrop-blur-sm rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200`}
-                  placeholder="name@example.com"
+                  placeholder={fieldConfig.emailPlaceholder}
                 />
               </div>
               {errors.email && (
@@ -198,117 +296,186 @@ const Register = () => {
               )}
             </div>
 
-            <div>
-              <label
-                htmlFor="password"
-                className="block text-sm font-medium text-gray-700 mb-2"
-              >
-                Password
-              </label>
-              <div className="relative group">
-                <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-indigo-500 transition-colors duration-200">
-                  <FiLock size={18} />
-                </div>
-                <input
-                  type="password"
-                  id="password"
-                  name="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  className={`w-full pl-10 pr-4 py-3.5 border ${
-                    errors.password ? "border-red-500" : "border-gray-200"
-                  } bg-white/70 backdrop-blur-sm rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200`}
-                  placeholder="Create a password"
-                />
-              </div>
-              {errors.password && (
-                <div className="mt-2 text-sm text-red-600">
-                  {errors.password}
-                </div>
-              )}
-            </div>
-
-            <div>
-              <label
-                htmlFor="confirmPassword"
-                className="block text-sm font-medium text-gray-700 mb-2"
-              >
-                Confirm Password
-              </label>
-              <div className="relative group">
-                <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-indigo-500 transition-colors duration-200">
-                  <FiLock size={18} />
-                </div>
-                <input
-                  type="password"
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  className={`w-full pl-10 pr-4 py-3.5 border ${
-                    errors.confirmPassword
-                      ? "border-red-500"
-                      : "border-gray-200"
-                  } bg-white/70 backdrop-blur-sm rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200`}
-                  placeholder="Confirm your password"
-                />
-              </div>
-              {errors.confirmPassword && (
-                <div className="mt-2 text-sm text-red-600">
-                  {errors.confirmPassword}
-                </div>
-              )}
-            </div>
-
-            <div className="flex items-start">
-              <div className="flex items-center h-5">
-                <input
-                  type="checkbox"
-                  id="agreeToTerms"
-                  name="agreeToTerms"
-                  checked={formData.agreeToTerms}
-                  onChange={handleChange}
-                  className="h-5 w-5 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded-md"
-                />
-              </div>
-              <div className="ml-3 text-sm">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
                 <label
-                  htmlFor="agreeToTerms"
-                  className="font-medium text-gray-700"
+                  htmlFor="password"
+                  className="block text-sm font-medium text-gray-700 mb-2"
                 >
-                  I agree to the{" "}
-                  <Link
-                    to="/terms"
-                    className="text-indigo-600 hover:text-indigo-800"
-                  >
-                    Terms of Service
-                  </Link>{" "}
-                  and{" "}
-                  <Link
-                    to="/privacy"
-                    className="text-indigo-600 hover:text-indigo-800"
-                  >
-                    Privacy Policy
-                  </Link>
+                  Password
                 </label>
-                {errors.agreeToTerms && (
-                  <div className="mt-1 text-sm text-red-600">
-                    {errors.agreeToTerms}
+                <div className="relative group">
+                  <input
+                    type="password"
+                    id="password"
+                    name="password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    className={`w-full px-4 py-3.5 border ${
+                      errors.password ? "border-red-500" : "border-gray-200"
+                    } bg-white/70 backdrop-blur-sm rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200`}
+                    placeholder="Create a password"
+                  />
+                </div>
+                {errors.password && (
+                  <div className="mt-2 text-sm text-red-600">
+                    {errors.password}
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label
+                  htmlFor="confirmPassword"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
+                  Confirm Password
+                </label>
+                <div className="relative group">
+                  <input
+                    type="password"
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    value={formData.confirmPassword}
+                    onChange={handleChange}
+                    className={`w-full px-4 py-3.5 border ${
+                      errors.confirmPassword
+                        ? "border-red-500"
+                        : "border-gray-200"
+                    } bg-white/70 backdrop-blur-sm rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200`}
+                    placeholder="Confirm password"
+                  />
+                </div>
+                {errors.confirmPassword && (
+                  <div className="mt-2 text-sm text-red-600">
+                    {errors.confirmPassword}
                   </div>
                 )}
               </div>
             </div>
 
+            {/* Role Selection */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                I am registering as a:
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div
+                  onClick={() => handleRoleSelect("volunteer")}
+                  className={`cursor-pointer border ${
+                    formData.role === "volunteer"
+                      ? "border-indigo-500 bg-indigo-50"
+                      : "border-gray-200 hover:border-indigo-200 hover:bg-indigo-50/50"
+                  } rounded-xl p-3 transition-all duration-200 flex items-center`}
+                >
+                  <div
+                    className={`w-8 h-8 rounded-full ${
+                      formData.role === "volunteer"
+                        ? "bg-indigo-100 text-indigo-600"
+                        : "bg-gray-100 text-gray-500"
+                    } flex items-center justify-center mr-2`}
+                  >
+                    <FiUser size={16} />
+                  </div>
+                  <div>
+                    <div className="font-medium text-sm text-gray-800">
+                      Volunteer
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      Help and contribute
+                    </div>
+                  </div>
+                  {formData.role === "volunteer" && (
+                    <div className="ml-auto text-indigo-600">
+                      <FiCheckSquare size={16} />
+                    </div>
+                  )}
+                </div>
+
+                <div
+                  onClick={() => handleRoleSelect("ngo")}
+                  className={`cursor-pointer border ${
+                    formData.role === "ngo"
+                      ? "border-blue-500 bg-blue-50"
+                      : "border-gray-200 hover:border-blue-200 hover:bg-blue-50/50"
+                  } rounded-xl p-3 transition-all duration-200 flex items-center`}
+                >
+                  <div
+                    className={`w-8 h-8 rounded-full ${
+                      formData.role === "ngo"
+                        ? "bg-blue-100 text-blue-600"
+                        : "bg-gray-100 text-gray-500"
+                    } flex items-center justify-center mr-2`}
+                  >
+                    <FiBriefcase size={16} />
+                  </div>
+                  <div>
+                    <div className="font-medium text-sm text-gray-800">
+                      Organization
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      Need volunteers (uses your name as organization)
+                    </div>
+                  </div>
+                  {formData.role === "ngo" && (
+                    <div className="ml-auto text-blue-600">
+                      <FiCheckSquare size={16} />
+                    </div>
+                  )}
+                </div>
+              </div>
+              {errors.role && (
+                <div className="mt-2 text-sm text-red-600">{errors.role}</div>
+              )}
+            </div>
+
+            <div className="flex items-start">
+              <input
+                id="agreeToTerms"
+                name="agreeToTerms"
+                type="checkbox"
+                checked={formData.agreeToTerms}
+                onChange={handleChange}
+                className="h-4 w-4 mt-1 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+              />
+              <label
+                htmlFor="agreeToTerms"
+                className="ml-2 block text-sm text-gray-600"
+              >
+                I agree to the{" "}
+                <Link
+                  to="/terms"
+                  className="text-indigo-600 hover:text-indigo-500"
+                >
+                  Terms of Service
+                </Link>{" "}
+                and{" "}
+                <Link
+                  to="/privacy"
+                  className="text-indigo-600 hover:text-indigo-500"
+                >
+                  Privacy Policy
+                </Link>
+              </label>
+            </div>
+            {errors.agreeToTerms && (
+              <div className="mt-2 text-sm text-red-600">
+                {errors.agreeToTerms}
+              </div>
+            )}
+
             <button
               type="submit"
-              disabled={loading}
+              disabled={isLoading}
               className={`w-full flex justify-center items-center py-3.5 px-4 border border-transparent rounded-xl shadow-lg text-base font-medium text-white transition-all duration-300 ${
-                loading
+                isLoading
                   ? "bg-indigo-400 cursor-not-allowed"
-                  : "bg-indigo-600 hover:bg-indigo-700 hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                  : formData.role === "ngo"
+                  ? "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  : "bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
               }`}
             >
-              {loading ? (
+              {isLoading ? (
                 <span className="flex items-center">
                   <svg
                     className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
@@ -334,87 +501,98 @@ const Register = () => {
                 </span>
               ) : (
                 <span className="flex items-center">
-                  Create Account
+                  {fieldConfig.createButtonText}
                   <FiArrowRight className="ml-2" />
                 </span>
               )}
             </button>
-          </form>
 
-          <div className="mt-8 text-center">
-            <p className="text-gray-600">
+            <div className="mt-8 text-center">
+              <p className="text-gray-600">
+                Already have an account?{" "}
+                <Link
+                  to="/auth/login"
+                  className="font-medium text-indigo-600 hover:text-indigo-800 transition-colors duration-200 hover:underline"
+                >
+                  Sign In
+                </Link>
+              </p>
+            </div>
+
+            <div className="mt-4 text-center text-gray-500 text-sm">
               Already have an account?{" "}
               <Link
-                to="/login"
-                className="font-medium text-indigo-600 hover:text-indigo-800 transition-colors duration-200 hover:underline"
+                to="/auth/login"
+                className="text-indigo-600 hover:text-indigo-500 font-medium"
               >
-                Sign in
+                Log in
               </Link>
-            </p>
-          </div>
+            </div>
+
+            {/* Hidden in production, useful for dev/test environments */}
+            {process.env.NODE_ENV !== "production" && (
+              <div className="mt-8 border-t border-gray-200 pt-4">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      const response = await fetch(
+                        "http://localhost:5000/api/auth/health-check"
+                      );
+                      const data = await response.json();
+                      alert(
+                        `Server status: ${response.status} ${
+                          response.statusText
+                        }\n\nResponse: ${JSON.stringify(data)}`
+                      );
+                    } catch (error) {
+                      alert(
+                        `Server connection failed: ${error.message}\n\nPlease ensure the server is running on http://localhost:5000`
+                      );
+                    }
+                  }}
+                  className="text-xs text-gray-500 hover:text-indigo-600"
+                >
+                  Diagnose Server Connection
+                </button>
+              </div>
+            )}
+          </form>
         </div>
       </div>
 
       {/* Right side - Image/Illustration */}
       <div className="hidden md:block w-1/2 bg-gradient-to-br from-indigo-600 via-indigo-700 to-purple-800 relative overflow-hidden">
-        {/* Decorative circles */}
-        <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-white rounded-full mix-blend-overlay filter opacity-10"></div>
-        <div className="absolute bottom-1/3 right-1/3 w-48 h-48 bg-white rounded-full mix-blend-overlay filter opacity-10"></div>
+        <div className="absolute inset-0 opacity-20">
+          <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-white rounded-full mix-blend-overlay filter blur-3xl"></div>
+          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-white rounded-full mix-blend-overlay filter blur-3xl"></div>
+        </div>
 
-        <div className="h-full flex flex-col justify-center items-center text-white p-12 relative z-10">
-          <div className="mb-8 bg-white/10 backdrop-blur-md p-6 rounded-2xl shadow-xl border border-white/10 transform hover:scale-105 transition-transform duration-300">
-            <svg
-              className="w-24 h-24 mx-auto"
-              viewBox="0 0 24 24"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"
-                stroke="white"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <circle
-                cx="8.5"
-                cy="7"
-                r="4"
-                stroke="white"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <path
-                d="M20 8v6M23 11h-6"
-                stroke="white"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </div>
-          <h2 className="text-4xl font-bold mb-4 text-center text-white drop-shadow-lg">
-            Join Our Community
-          </h2>
-          <p className="text-xl text-center text-white/90 max-w-md drop-shadow">
-            Create an account and start making a positive impact in your
-            community today.
-          </p>
-
-          <div className="mt-12 grid grid-cols-2 gap-6 w-full max-w-md">
-            <div className="bg-white/10 rounded-xl p-5 backdrop-blur-md border border-white/10 shadow-xl transform hover:translate-y-[-5px] transition-transform duration-300">
-              <h3 className="font-semibold text-lg mb-2">Find Opportunities</h3>
-              <p className="text-sm text-white/80">
-                Discover volunteer opportunities based on your interests and
-                skills
-              </p>
-            </div>
-            <div className="bg-white/10 rounded-xl p-5 backdrop-blur-md border border-white/10 shadow-xl transform hover:translate-y-[-5px] transition-transform duration-300">
-              <h3 className="font-semibold text-lg mb-2">Build Profile</h3>
-              <p className="text-sm text-white/80">
-                Create a robust volunteer profile to showcase your experience
-              </p>
+        <div className="absolute inset-0 flex items-center justify-center p-10">
+          <div className="max-w-lg text-center">
+            <h2 className="text-3xl font-bold text-white mb-6">
+              {formData.role === "ngo"
+                ? "Find Dedicated Volunteers For Your Cause"
+                : "Make a Meaningful Impact in Your Community"}
+            </h2>
+            <p className="text-white/80 text-lg mb-8">
+              {formData.role === "ngo"
+                ? "Post opportunities, manage volunteers, and track your organization's impact"
+                : "Connect with volunteering opportunities, track your hours, and see the difference you're making"}
+            </p>
+            <div className="grid grid-cols-3 gap-5">
+              <div className="bg-white/10 backdrop-blur-sm p-4 rounded-xl">
+                <div className="text-2xl font-bold text-white mb-1">150K+</div>
+                <div className="text-white/70 text-sm">Volunteer Hours</div>
+              </div>
+              <div className="bg-white/10 backdrop-blur-sm p-4 rounded-xl">
+                <div className="text-2xl font-bold text-white mb-1">5,000+</div>
+                <div className="text-white/70 text-sm">Events Organized</div>
+              </div>
+              <div className="bg-white/10 backdrop-blur-sm p-4 rounded-xl">
+                <div className="text-2xl font-bold text-white mb-1">30K+</div>
+                <div className="text-white/70 text-sm">Active Volunteers</div>
+              </div>
             </div>
           </div>
         </div>
