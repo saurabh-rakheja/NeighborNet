@@ -136,7 +136,7 @@ const Sidebar = ({ isMobile, onToggle }) => {
         {
           name: "My Profile",
           icon: <FiUser />,
-          path: "/dashboard/volunteer-profile",
+          path: "/dashboard/profile",
         },
         {
           name: "My Impact",
