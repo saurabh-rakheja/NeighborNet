@@ -439,6 +439,7 @@ exports.getMe = async (req, res) => {
     res.json({
       success: true,
       data: req.user,
+      user: req.user // Include user field for compatibility with client
     });
   } catch (error) {
     console.error("Error in getMe:", error);

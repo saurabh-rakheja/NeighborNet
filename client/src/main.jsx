@@ -29,6 +29,7 @@ import MyShifts from "./components/pages/dashboard/MyShifts";
 import CreateEvent from "./components/pages/dashboard/CreateEvent";
 import CreateShift from "./components/pages/dashboard/CreateShift";
 import VolunteerList from "./components/pages/dashboard/VolunteerList";
+
 import AdminReports from "./components/pages/dashboard/AdminReports";
 
 // New components we've added
@@ -96,6 +97,8 @@ const DashboardResolver = () => {
   }
 };
 
+import VolunteerOnboarding from "./components/pages/onboarding/VolunteerOnboarding";
+
 const router = createBrowserRouter(
   createRoutesFromElements(
     <Route>
@@ -143,7 +146,7 @@ const router = createBrowserRouter(
 
           {/* Volunteer specific routes */}
           <Route
-            path="dashboard/volunteer-profile"
+            path="dashboard/profile"
             element={<VolunteerProfile />}
           />
           <Route path="dashboard/impact" element={<VolunteerImpact />} />
@@ -164,6 +167,8 @@ const router = createBrowserRouter(
             element={<VolunteerList />}
           />
           <Route path="dashboard/admin/reports" element={<AdminReports />} />
+
+          <Route path="onboarding" element={<VolunteerOnboarding />} />
         </Route>
       </Route>
 

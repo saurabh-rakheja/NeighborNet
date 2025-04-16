@@ -7,6 +7,7 @@ import {
   FiAlertCircle,
   FiUser,
   FiBriefcase,
+  FiInfo,
 } from "react-icons/fi";
 
 const Register = () => {
@@ -17,6 +18,7 @@ const Register = () => {
     confirmPassword: "",
     role: "",
     organization: "",
+    country: "India",
     agreeToTerms: false,
   });
 
@@ -156,6 +158,11 @@ const Register = () => {
       if (response.success) {
         // Navigation is handled by the effect above
         console.log("Registration successful", response);
+        if (formData.role === 'volunteer') {
+          navigate('/onboarding');
+        } else {
+          navigate('/dashboard');
+        }
       } else {
         console.error("Registration failed:", response.message);
         // Error will be shown from the authStore error state
@@ -428,6 +435,10 @@ const Register = () => {
                 <div className="mt-2 text-sm text-red-600">{errors.role}</div>
               )}
             </div>
+            
+            <div className="text-xs text-gray-500 p-2 border border-gray-200 rounded-md bg-gray-50">
+              <FiInfo className="inline-block mr-1" /> Your account will be registered with India as the default country.
+            </div>
 
             <div className="flex items-start">
               <input
@@ -507,26 +518,14 @@ const Register = () => {
               )}
             </button>
 
-            <div className="mt-8 text-center">
+            {/* Already have an account? */}
+            <div className="text-center mt-5">
               <p className="text-gray-600">
                 Already have an account?{" "}
-                <Link
-                  to="/auth/login"
-                  className="font-medium text-indigo-600 hover:text-indigo-800 transition-colors duration-200 hover:underline"
-                >
-                  Sign In
+                <Link to="/login" className="font-medium text-primary hover:underline">
+                  Sign in
                 </Link>
               </p>
-            </div>
-
-            <div className="mt-4 text-center text-gray-500 text-sm">
-              Already have an account?{" "}
-              <Link
-                to="/auth/login"
-                className="text-indigo-600 hover:text-indigo-500 font-medium"
-              >
-                Log in
-              </Link>
             </div>
 
             {/* Hidden in production, useful for dev/test environments */}

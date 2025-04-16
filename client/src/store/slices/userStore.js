@@ -70,6 +70,7 @@ const useUserStore = create(
         set({ isLoading: true, error: null });
         
         try {
+          // Ensure experience level is included in the profile data
           const response = await api.put("/users/profile", profileData);
           set({
             profile: response.data.profile,

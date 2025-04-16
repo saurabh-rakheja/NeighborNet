@@ -197,20 +197,55 @@ const useAuthStore = create(
         set({ isLoading: true });
 
         try {
+          console.log("Refreshing user data...");
           const response = await api.get("/auth/me");
+          console.log("Auth/me response:", response.data);
+          
+          // Handle different response formats
+          // The server might return data in response.data.data or response.data.user
+          let userData;
+          
+          if (response.data.data) {
+            userData = response.data.data;
+          } else if (response.data.user) {
+            userData = response.data.user;
+          } else {
+            // If neither format is found, try to use the whole response
+            userData = response.data.success ? response.data : null;
+          }
+          
+          if (!userData) {
+            throw new Error("Invalid response format from server");
+          }
+          
           set({
-            user: response.data.user,
+            user: userData,
             isLoading: false,
           });
 
-          return { success: true, message: "User data refreshed" };
+          return { 
+            success: true, 
+            message: "User data refreshed",
+            user: userData 
+          };
         } catch (error) {
+          console.error("Error in refreshUserData:", error);
+          
           // If token is invalid or expired, log out the user
           if (error.response?.status === 401) {
             get().logout();
             return {
               success: false,
               message: "Session expired. Please login again.",
+            };
+          }
+          
+          // Handle 404 errors specifically
+          if (error.response?.status === 404) {
+            return {
+              success: false,
+              message: "API endpoint not found. The server may be misconfigured.",
+              notFound: true
             };
           }
 
@@ -342,6 +377,78 @@ const useAuthStore = create(
           });
 
           return { success: false, message: errorMessage };
+        }
+      },
+
+      // Add the updateUserProfile method to the authStore
+      updateUserProfile: async (profileData) => {
+        try {
+          const token = localStorage.getItem('auth-token');
+          if (!token) {
+            return { success: false, message: 'Authentication required' };
+          }
+
+          // Split the data into general profile fields and volunteer-specific fields
+          const generalUserData = {
+            name: profileData.name,
+            phone: profileData.phone,
+            address: {
+              street: profileData.address,
+              city: profileData.city,
+              state: profileData.state,
+              zipCode: profileData.zipCode,
+              country: profileData.country
+            }
+          };
+
+          const volunteerSpecificData = {
+            skills: profileData.skills,
+            interests: profileData.interests,
+            availability: profileData.availability,
+            preferredLocations: profileData.preferredLocations,
+            emergencyContact: profileData.emergencyContact,
+            experience: profileData.experience,
+            experienceLevel: profileData.experienceLevel,
+            maxDistance: profileData.maxDistance,
+            bio: profileData.bio,
+            additionalInfo: profileData.additionalInfo,
+            // Add missing fields from onboarding
+            hasDriverLicense: profileData.hasDriverLicense,
+            hasVehicle: profileData.hasVehicle,
+            hasCriminalRecord: profileData.hasCriminalRecord,
+            criminalRecordDetails: profileData.criminalRecordDetails,
+            education: profileData.education,
+            occupation: profileData.occupation,
+            dateOfBirth: profileData.dateOfBirth
+          };
+
+          // Update general user profile first
+          const userUpdateResponse = await api.put('/users/profile', generalUserData);
+          
+          // Then update volunteer-specific profile
+          const volunteerUpdateResponse = await api.put('/users/volunteer-profile', volunteerSpecificData);
+          
+          if (userUpdateResponse.data.success && volunteerUpdateResponse.data.success) {
+            set((state) => ({
+              user: {
+                ...state.user,
+                ...generalUserData,
+                ...volunteerSpecificData
+              }
+            }));
+            return { success: true };
+          }
+
+          return { 
+            success: false, 
+            message: 'Some profile updates failed. Please try again.' 
+          };
+        } catch (error) {
+          console.error('Error updating profile:', error);
+          return {
+            success: false,
+            message: error.response?.data?.message || 'Error updating profile'
+          };
         }
       },
     }),

@@ -2,13 +2,13 @@ import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import useAuthStore from "../../../store/authStore";
 import axios from "axios";
-import {
-  FiClock,
-  FiCalendar,
-  FiMapPin,
+import { 
+  FiClock, 
+  FiCalendar, 
+  FiMapPin, 
   FiStar,
   FiBarChart2,
-  FiAward,
+  FiAward, 
   FiTrendingUp,
   FiUsers,
   FiTarget,
@@ -37,7 +37,7 @@ const VolunteerImpact = () => {
     const fetchImpactData = async () => {
       try {
         setLoading(true);
-
+        
         // In a real implementation, this would make actual API calls
         setTimeout(() => {
           setImpactData({
@@ -126,10 +126,10 @@ const VolunteerImpact = () => {
         setLoading(false);
       }
     };
-
+    
     fetchImpactData();
   }, []);
-
+  
   // Format date for display
   const formatDate = (dateString) => {
     const date = new Date(dateString);
@@ -159,14 +159,14 @@ const VolunteerImpact = () => {
             </p>
             <p className="text-sm opacity-80">Total Hours</p>
           </div>
-
+          
           <div className="bg-white/20 backdrop-blur-sm rounded-lg p-4 text-center">
             <FiCalendar className="text-2xl mx-auto mb-2" />
             <p className="text-2xl font-bold">
               {loading ? "..." : impactData.totalEvents}
             </p>
             <p className="text-sm opacity-80">Events Completed</p>
-          </div>
+            </div>
 
           <div className="bg-white/20 backdrop-blur-sm rounded-lg p-4 text-center">
             <FiTarget className="text-2xl mx-auto mb-2" />
@@ -174,7 +174,7 @@ const VolunteerImpact = () => {
               {loading ? "..." : impactData.impactAreas.length}
             </p>
             <p className="text-sm opacity-80">Impact Areas</p>
-          </div>
+            </div>
 
           <div className="bg-white/20 backdrop-blur-sm rounded-lg p-4 text-center">
             <FiAward className="text-2xl mx-auto mb-2" />
@@ -185,17 +185,17 @@ const VolunteerImpact = () => {
           </div>
         </div>
       </div>
-
+      
       {/* Main Content - 2 Column Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Left Column - Charts and Metrics */}
         <div className="lg:col-span-2 space-y-8">
           {/* Monthly Hours Chart */}
-          <div className="bg-white rounded-xl shadow-md p-6">
-            <h2 className="text-xl font-semibold mb-4 text-gray-800 flex items-center">
+        <div className="bg-white rounded-xl shadow-md p-6">
+          <h2 className="text-xl font-semibold mb-4 text-gray-800 flex items-center">
               <FiBarChart2 className="mr-2 text-indigo-500" /> Monthly Volunteer
               Hours
-            </h2>
+          </h2>
 
             {loading ? (
               <div className="h-64 flex items-center justify-center">
@@ -257,24 +257,24 @@ const VolunteerImpact = () => {
                       <span className="text-sm text-gray-500">
                         {area.hours} hours ({area.percentage}%)
                       </span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2.5">
-                      <div
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2.5">
+                  <div 
                         className="bg-indigo-500 h-2.5 rounded-full"
                         style={{ width: `${area.percentage}%` }}
-                      ></div>
-                    </div>
-                  </div>
-                ))}
+                  ></div>
+                </div>
               </div>
-            )}
+            ))}
           </div>
-
+            )}
+        </div>
+        
           {/* Recent Impact */}
-          <div className="bg-white rounded-xl shadow-md p-6">
-            <h2 className="text-xl font-semibold mb-4 text-gray-800 flex items-center">
+        <div className="bg-white rounded-xl shadow-md p-6">
+          <h2 className="text-xl font-semibold mb-4 text-gray-800 flex items-center">
               <FiActivity className="mr-2 text-indigo-500" /> Recent Impact
-            </h2>
+          </h2>
 
             {loading ? (
               <div className="h-48 flex items-center justify-center">
@@ -298,8 +298,8 @@ const VolunteerImpact = () => {
                       <FiCheck className="inline-block text-indigo-500 mr-1" />{" "}
                       {impact.impact}
                     </p>
-                  </div>
-                ))}
+              </div>
+            ))}
               </div>
             )}
           </div>
@@ -336,9 +336,9 @@ const VolunteerImpact = () => {
                         style={{ width: `${skill.progress}%` }}
                       ></div>
                     </div>
-                  </div>
-                ))}
               </div>
+            ))}
+          </div>
             )}
 
             <div className="mt-6 text-center">
@@ -347,15 +347,15 @@ const VolunteerImpact = () => {
                 className="inline-flex items-center text-sm font-medium text-indigo-600 hover:text-indigo-800"
               >
                 Update your skills <FiChevronRight className="ml-1" />
-              </Link>
-            </div>
-          </div>
-
-          {/* Achievements */}
+            </Link>
+        </div>
+      </div>
+      
+      {/* Achievements */}
           <div className="bg-white rounded-xl shadow-md p-6">
             <h2 className="text-xl font-semibold mb-4 text-gray-800 flex items-center">
               <FiAward className="mr-2 text-indigo-500" /> Achievements
-            </h2>
+        </h2>
 
             {loading ? (
               <div className="h-48 flex items-center justify-center">
@@ -381,27 +381,27 @@ const VolunteerImpact = () => {
                       {achievement.icon === "FiUsers" && (
                         <FiUsers className="h-5 w-5" />
                       )}
-                    </div>
-                    <div>
+                </div>
+                <div>
                       <h3 className="font-medium text-gray-800">
                         {achievement.title}
-                      </h3>
+                  </h3>
                       <p className="text-sm text-gray-500">
                         {achievement.description}
                       </p>
                       <p className="text-xs text-gray-400 mt-1">
                         Earned on {formatDate(achievement.date)}
                       </p>
-                    </div>
+              </div>
                   </div>
                 ))}
-              </div>
-            )}
-          </div>
+                </div>
+              )}
+            </div>
         </div>
       </div>
     </div>
   );
 };
 
-export default VolunteerImpact;
+export default VolunteerImpact; 

@@ -15,7 +15,7 @@ const Dashboard = () => {
 
   // Show loading state
   if (isLoading) {
-    return (
+  return (
       <div className="container mx-auto p-4 md:p-6 flex justify-center items-center min-h-[50vh]">
         <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
       </div>
@@ -66,9 +66,9 @@ const Dashboard = () => {
             >
               Contact Support
             </a>
-          </div>
-        </div>
-      );
+      </div>
+    </div>
+  );
   }
 };
 

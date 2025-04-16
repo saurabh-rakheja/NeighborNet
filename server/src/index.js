@@ -31,7 +31,10 @@ connectDB()
   .catch((err) => console.error("MongoDB connection error:", err));
 
 // Configure CORS
-const allowedOrigins = process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : ["http://localhost:3000"];
+const allowedOrigins = process.env.ALLOWED_ORIGINS 
+  ? process.env.ALLOWED_ORIGINS.split(',') 
+  : ["http://localhost:3000", "http://localhost:5173", "http://localhost:5174"];
+
 app.use(cors({
   origin: function(origin, callback) {
     // Allow requests with no origin (like mobile apps or curl requests)
@@ -40,7 +43,7 @@ app.use(cors({
     if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV !== "production") {
       callback(null, true);
     } else {
-      console.warn(`Origin ${origin} not allowed by CORS`);
+      console.warn(`Origin ${origin} not allowed by CORS. Allowed origins: ${allowedOrigins.join(', ')}`);
       callback(new Error("Not allowed by CORS"));
     }
   },
@@ -84,6 +87,23 @@ const limiter = rateLimit({
   message: "Too many requests from this IP, please try again later"
 });
 app.use("/api/", limiter);
+
+// Health check endpoint for API root
+app.get("/api/health", (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: "API server is running",
+    version: "1.0.0",
+    timestamp: new Date().toISOString(),
+    endpoints: {
+      auth: "/api/auth",
+      users: "/api/users",
+      events: "/api/events",
+      shifts: "/api/shifts",
+      participations: "/api/participations"
+    }
+  });
+});
 
 // Routes
 app.use("/api/auth", authRoutes);

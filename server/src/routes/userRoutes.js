@@ -68,12 +68,4 @@ router.get(
   userController.getUserById
 );
 
-// Update user verification status
-router.patch(
-  "/verify",
-  authenticateUser,
-  authorizeRoles("admin"),
-  userController.updateVerificationStatus
-);
-
 module.exports = router; 

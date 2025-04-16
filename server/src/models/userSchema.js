@@ -87,14 +87,13 @@ const userSchema = new mongoose.Schema(
       trim: true,
     }],
     availability: {
-      weekdays: {
-        type: [String],
-        enum: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
-      },
-      timeSlots: {
-        type: [String],
-        enum: ["Morning", "Afternoon", "Evening"],
-      }
+      monday: [String],
+      tuesday: [String],
+      wednesday: [String],
+      thursday: [String],
+      friday: [String],
+      saturday: [String],
+      sunday: [String]
     },
     preferredLocations: [{
       type: String,
@@ -103,6 +102,7 @@ const userSchema = new mongoose.Schema(
     experience: {
       type: String,
       enum: ["Beginner", "Intermediate", "Expert"],
+      default: "Beginner"
     },
     interests: [{
       type: String,
@@ -122,10 +122,41 @@ const userSchema = new mongoose.Schema(
         trim: true,
       },
     },
-    verificationStatus: {
+    // Additional fields from volunteer onboarding
+    dateOfBirth: {
+      type: Date,
+    },
+    education: {
       type: String,
-      enum: ["Pending", "Verified", "Rejected"],
-      default: "Pending",
+      trim: true,
+    },
+    occupation: {
+      type: String,
+      trim: true,
+    },
+    maxDistance: {
+      type: Number,
+      default: 15,
+    },
+    hasDriverLicense: {
+      type: Boolean,
+      default: false,
+    },
+    hasVehicle: {
+      type: Boolean,
+      default: false,
+    },
+    hasCriminalRecord: {
+      type: Boolean,
+      default: false,
+    },
+    criminalRecordDetails: {
+      type: String,
+      trim: true,
+    },
+    additionalInfo: {
+      type: String,
+      trim: true,
     },
     totalHours: {
       type: Number,

@@ -31,7 +31,7 @@ exports.updateCurrentUserProfile = async (req, res) => {
     // Fields that cannot be updated through this endpoint
     const restrictedFields = [
       "role", "password", "email", "tokenVersion", 
-      "loginAttempts", "lockUntil", "verificationStatus"
+      "loginAttempts", "lockUntil"
     ];
     
     // Create a sanitized update object
@@ -73,7 +73,7 @@ exports.updateCurrentUserProfile = async (req, res) => {
 exports.getVolunteerProfile = async (req, res) => {
   try {
     const user = await User.findById(req.user.id)
-      .select("skills availability preferredLocations experience interests emergencyContact totalHours verificationStatus")
+      .select("skills availability preferredLocations experience interests emergencyContact totalHours dateOfBirth education occupation maxDistance hasDriverLicense hasVehicle hasCriminalRecord criminalRecordDetails additionalInfo")
       .lean();
     
     if (!user) {
@@ -110,7 +110,7 @@ exports.getVolunteerProfile = async (req, res) => {
 exports.getNgoProfile = async (req, res) => {
   try {
     const user = await User.findById(req.user.id)
-      .select("organization organizationDetails organizationLogo verificationStatus")
+      .select("organization organizationDetails organizationLogo")
       .lean();
     
     if (!user) {
@@ -147,7 +147,11 @@ exports.updateVolunteerProfile = async (req, res) => {
     // Only allow updating volunteer-specific fields
     const allowedFields = [
       "skills", "availability", "preferredLocations", 
-      "experience", "interests", "emergencyContact", "notes"
+      "experience", "interests", "emergencyContact", "notes",
+      // Add new fields from onboarding
+      "dateOfBirth", "education", "occupation", "maxDistance",
+      "hasDriverLicense", "hasVehicle", "hasCriminalRecord",
+      "criminalRecordDetails", "additionalInfo"
     ];
     
     // Create a sanitized update object
@@ -228,17 +232,13 @@ exports.updateNgoProfile = async (req, res) => {
 exports.getAllUsers = async (req, res) => {
   try {
     // Extract query parameters
-    const { role, verificationStatus, search } = req.query;
+    const { role, search } = req.query;
     
     // Build query
     const query = {};
     
     if (role) {
       query.role = role;
-    }
-    
-    if (verificationStatus) {
-      query.verificationStatus = verificationStatus;
     }
     
     if (search) {
@@ -261,44 +261,6 @@ exports.getAllUsers = async (req, res) => {
     });
   } catch (error) {
     console.error("Error fetching users:", error);
-    res.status(500).json({
-      success: false,
-      message: "Internal server error",
-    });
-  }
-};
-
-// Admin: Update user verification status
-exports.updateVerificationStatus = async (req, res) => {
-  try {
-    const { userId, verificationStatus } = req.body;
-    
-    if (!["Pending", "Verified", "Rejected"].includes(verificationStatus)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid verification status",
-      });
-    }
-    
-    const user = await User.findByIdAndUpdate(
-      userId,
-      { verificationStatus },
-      { new: true, runValidators: true }
-    ).select("name email role verificationStatus");
-    
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found",
-      });
-    }
-    
-    res.status(200).json({
-      success: true,
-      data: user,
-    });
-  } catch (error) {
-    console.error("Error updating verification status:", error);
     res.status(500).json({
       success: false,
       message: "Internal server error",
