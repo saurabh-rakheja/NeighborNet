@@ -73,7 +73,7 @@ exports.updateCurrentUserProfile = async (req, res) => {
 exports.getVolunteerProfile = async (req, res) => {
   try {
     const user = await User.findById(req.user.id)
-      .select("skills availability preferredLocations experience interests emergencyContact totalHours dateOfBirth education occupation maxDistance hasDriverLicense hasVehicle hasCriminalRecord criminalRecordDetails additionalInfo")
+      .select("volunteerInfo")
       .lean();
     
     if (!user) {
@@ -84,9 +84,7 @@ exports.getVolunteerProfile = async (req, res) => {
     }
     
     // Check if user has volunteer-specific fields
-    const hasVolunteerFields = user.skills || user.availability || user.preferredLocations;
-    
-    if (!hasVolunteerFields) {
+    if (!user.volunteerInfo) {
       return res.status(404).json({
         success: false,
         message: "Volunteer profile not found",
@@ -95,7 +93,7 @@ exports.getVolunteerProfile = async (req, res) => {
     
     res.status(200).json({
       success: true,
-      data: user,
+      data: user.volunteerInfo,
     });
   } catch (error) {
     console.error("Error fetching volunteer profile:", error);
@@ -110,7 +108,7 @@ exports.getVolunteerProfile = async (req, res) => {
 exports.getNgoProfile = async (req, res) => {
   try {
     const user = await User.findById(req.user.id)
-      .select("organization organizationDetails organizationLogo")
+      .select("ngoInfo")
       .lean();
     
     if (!user) {
@@ -121,7 +119,7 @@ exports.getNgoProfile = async (req, res) => {
     }
     
     // Check if user has NGO fields
-    if (!user.organization) {
+    if (!user.ngoInfo || !user.ngoInfo.organization) {
       return res.status(404).json({
         success: false,
         message: "NGO profile not found",
@@ -130,7 +128,7 @@ exports.getNgoProfile = async (req, res) => {
     
     res.status(200).json({
       success: true,
-      data: user,
+      data: user.ngoInfo,
     });
   } catch (error) {
     console.error("Error fetching NGO profile:", error);
@@ -144,29 +142,18 @@ exports.getNgoProfile = async (req, res) => {
 // Update volunteer profile
 exports.updateVolunteerProfile = async (req, res) => {
   try {
-    // Only allow updating volunteer-specific fields
-    const allowedFields = [
-      "skills", "availability", "preferredLocations", 
-      "experience", "interests", "emergencyContact", "notes",
-      // Add new fields from onboarding
-      "dateOfBirth", "education", "occupation", "maxDistance",
-      "hasDriverLicense", "hasVehicle", "hasCriminalRecord",
-      "criminalRecordDetails", "additionalInfo"
-    ];
-    
-    // Create a sanitized update object
     const updateData = {};
-    for (const [key, value] of Object.entries(req.body)) {
-      if (allowedFields.includes(key)) {
-        updateData[key] = value;
-      }
+    
+    // Map request body to volunteerInfo
+    if (Object.keys(req.body).length > 0) {
+      updateData['volunteerInfo'] = req.body;
     }
     
     const user = await User.findByIdAndUpdate(
       req.user.id,
       updateData,
       { new: true, runValidators: true }
-    ).select(allowedFields.join(" "));
+    ).select("volunteerInfo");
     
     if (!user) {
       return res.status(404).json({
@@ -177,7 +164,7 @@ exports.updateVolunteerProfile = async (req, res) => {
     
     res.status(200).json({
       success: true,
-      data: user,
+      data: user.volunteerInfo,
     });
   } catch (error) {
     console.error("Error updating volunteer profile:", error);
@@ -191,22 +178,18 @@ exports.updateVolunteerProfile = async (req, res) => {
 // Update NGO profile
 exports.updateNgoProfile = async (req, res) => {
   try {
-    // Only allow updating NGO-specific fields
-    const allowedFields = ["organization", "organizationDetails", "organizationLogo"];
-    
-    // Create a sanitized update object
     const updateData = {};
-    for (const [key, value] of Object.entries(req.body)) {
-      if (allowedFields.includes(key)) {
-        updateData[key] = value;
-      }
+    
+    // Map request body to ngoInfo
+    if (Object.keys(req.body).length > 0) {
+      updateData['ngoInfo'] = req.body;
     }
     
     const user = await User.findByIdAndUpdate(
       req.user.id,
       updateData,
       { new: true, runValidators: true }
-    ).select(allowedFields.join(" "));
+    ).select("ngoInfo");
     
     if (!user) {
       return res.status(404).json({
@@ -217,7 +200,7 @@ exports.updateNgoProfile = async (req, res) => {
     
     res.status(200).json({
       success: true,
-      data: user,
+      data: user.ngoInfo,
     });
   } catch (error) {
     console.error("Error updating NGO profile:", error);
@@ -245,7 +228,7 @@ exports.getAllUsers = async (req, res) => {
       query.$or = [
         { name: { $regex: search, $options: 'i' } },
         { email: { $regex: search, $options: 'i' } },
-        { organization: { $regex: search, $options: 'i' } }
+        { 'ngoInfo.organization': { $regex: search, $options: 'i' } }
       ];
     }
     

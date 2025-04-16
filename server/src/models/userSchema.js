@@ -4,6 +4,7 @@ const crypto = require("crypto");
 
 const userSchema = new mongoose.Schema(
   {
+    // Basic user information
     name: {
       type: String,
       required: [true, "Please provide a name"],
@@ -33,138 +34,144 @@ const userSchema = new mongoose.Schema(
         message: "Please select a valid role",
       },
     },
-    // Basic profile for all users
-    phoneNumber: {
-      type: String,
-      trim: true,
-    },
-    address: {
-      street: { type: String, trim: true },
-      city: { type: String, trim: true },
-      state: { type: String, trim: true },
-      zipCode: { type: String, trim: true },
-      country: { type: String, trim: true, default: "United States" },
-    },
-    bio: {
-      type: String,
-      trim: true,
-      maxLength: [500, "Bio cannot exceed 500 characters"],
-    },
-    profilePicture: {
-      type: String, // URL to image
-      default: "/images/default-avatar.png",
+    
+    // Common profile information
+    profile: {
+      phoneNumber: {
+        type: String,
+        trim: true,
+      },
+      address: {
+        street: { type: String, trim: true },
+        city: { type: String, trim: true },
+        state: { type: String, trim: true },
+        zipCode: { type: String, trim: true },
+        country: { type: String, trim: true, default: "United States" },
+      },
+      bio: {
+        type: String,
+        trim: true,
+        maxLength: [500, "Bio cannot exceed 500 characters"],
+      },
+      profilePicture: {
+        type: String, // URL to image
+        default: "/images/default-avatar.png",
+      },
     },
     
-    // NGO specific fields
-    organization: {
-      type: String,
-      trim: true,
-      maxLength: [100, "Organization name cannot exceed 100 characters"],
-      // Required only if role is ngo
-      validate: {
-        validator: function(value) {
-          return this.role !== 'ngo' || (value && value.length > 0);
+    // NGO specific information
+    ngoInfo: {
+      organization: {
+        type: String,
+        trim: true,
+        maxLength: [100, "Organization name cannot exceed 100 characters"],
+        // Required only if role is ngo
+        validate: {
+          validator: function(value) {
+            return this.role !== 'ngo' || (value && value.length > 0);
+          },
+          message: 'Organization name is required for NGO accounts'
+        }
+      },
+      details: {
+        description: { type: String, trim: true },
+        website: { type: String, trim: true },
+        mission: { type: String, trim: true },
+        foundedYear: { type: Number },
+        size: { type: String, enum: ["Small", "Medium", "Large"] },
+        registrationNumber: { type: String, trim: true },
+        taxId: { type: String, trim: true },
+      },
+      logo: {
+        type: String, // URL to image
+      },
+    },
+    
+    // Volunteer specific information
+    volunteerInfo: {
+      skills: [{
+        type: String,
+        trim: true,
+      }],
+      availability: {
+        monday: [String],
+        tuesday: [String],
+        wednesday: [String],
+        thursday: [String],
+        friday: [String],
+        saturday: [String],
+        sunday: [String]
+      },
+      preferredLocations: [{
+        type: String,
+        trim: true,
+      }],
+      experience: {
+        type: String,
+        enum: ["Beginner", "Intermediate", "Expert"],
+        default: "Beginner"
+      },
+      interests: [{
+        type: String,
+        trim: true,
+      }],
+      emergencyContact: {
+        name: {
+          type: String,
+          trim: true,
         },
-        message: 'Organization name is required for NGO accounts'
-      }
-    },
-    organizationDetails: {
-      description: { type: String, trim: true },
-      website: { type: String, trim: true },
-      mission: { type: String, trim: true },
-      foundedYear: { type: Number },
-      size: { type: String, enum: ["Small", "Medium", "Large"] },
-      registrationNumber: { type: String, trim: true },
-      taxId: { type: String, trim: true },
-    },
-    organizationLogo: {
-      type: String, // URL to image
-    },
-    
-    // Volunteer specific fields
-    skills: [{
-      type: String,
-      trim: true,
-    }],
-    availability: {
-      monday: [String],
-      tuesday: [String],
-      wednesday: [String],
-      thursday: [String],
-      friday: [String],
-      saturday: [String],
-      sunday: [String]
-    },
-    preferredLocations: [{
-      type: String,
-      trim: true,
-    }],
-    experience: {
-      type: String,
-      enum: ["Beginner", "Intermediate", "Expert"],
-      default: "Beginner"
-    },
-    interests: [{
-      type: String,
-      trim: true,
-    }],
-    emergencyContact: {
-      name: {
+        relationship: {
+          type: String,
+          trim: true,
+        },
+        phone: {
+          type: String,
+          trim: true,
+        },
+      },
+      dateOfBirth: {
+        type: Date,
+      },
+      education: {
         type: String,
         trim: true,
       },
-      relationship: {
+      occupation: {
         type: String,
         trim: true,
       },
-      phone: {
+      maxDistance: {
+        type: Number,
+        default: 15,
+      },
+      hasDriverLicense: {
+        type: Boolean,
+        default: false,
+      },
+      hasVehicle: {
+        type: Boolean,
+        default: false,
+      },
+      hasCriminalRecord: {
+        type: Boolean,
+        default: false,
+      },
+      criminalRecordDetails: {
         type: String,
         trim: true,
       },
-    },
-    // Additional fields from volunteer onboarding
-    dateOfBirth: {
-      type: Date,
-    },
-    education: {
-      type: String,
-      trim: true,
-    },
-    occupation: {
-      type: String,
-      trim: true,
-    },
-    maxDistance: {
-      type: Number,
-      default: 15,
-    },
-    hasDriverLicense: {
-      type: Boolean,
-      default: false,
-    },
-    hasVehicle: {
-      type: Boolean,
-      default: false,
-    },
-    hasCriminalRecord: {
-      type: Boolean,
-      default: false,
-    },
-    criminalRecordDetails: {
-      type: String,
-      trim: true,
-    },
-    additionalInfo: {
-      type: String,
-      trim: true,
-    },
-    totalHours: {
-      type: Number,
-      default: 0,
-    },
-    notes: {
-      type: String,
-      trim: true,
+      additionalInfo: {
+        type: String,
+        trim: true,
+      },
+      totalHours: {
+        type: Number,
+        default: 0,
+      },
+      notes: {
+        type: String,
+        trim: true,
+      },
     },
     
     // Authentication and security

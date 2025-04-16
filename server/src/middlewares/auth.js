@@ -88,7 +88,7 @@ const authorizeCapabilities = (capability) => {
         // User has volunteer capabilities if they're a volunteer or have skills
         if (
           req.user.role === "volunteer" ||
-          (req.user.skills && req.user.skills.length > 0)
+          (req.user.volunteerInfo && req.user.volunteerInfo.skills && req.user.volunteerInfo.skills.length > 0)
         ) {
           return next();
         }
@@ -96,7 +96,7 @@ const authorizeCapabilities = (capability) => {
 
       case "ngo":
         // User has NGO capabilities if they're an NGO or have organization info
-        if (req.user.role === "ngo" || req.user.organization) {
+        if (req.user.role === "ngo" || (req.user.ngoInfo && req.user.ngoInfo.organization)) {
           return next();
         }
         break;

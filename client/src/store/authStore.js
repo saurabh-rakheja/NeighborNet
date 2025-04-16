@@ -388,52 +388,15 @@ const useAuthStore = create(
             return { success: false, message: 'Authentication required' };
           }
 
-          // Split the data into general profile fields and volunteer-specific fields
-          const generalUserData = {
-            name: profileData.name,
-            phone: profileData.phone,
-            address: {
-              street: profileData.address,
-              city: profileData.city,
-              state: profileData.state,
-              zipCode: profileData.zipCode,
-              country: profileData.country
-            }
-          };
-
-          const volunteerSpecificData = {
-            skills: profileData.skills,
-            interests: profileData.interests,
-            availability: profileData.availability,
-            preferredLocations: profileData.preferredLocations,
-            emergencyContact: profileData.emergencyContact,
-            experience: profileData.experience,
-            experienceLevel: profileData.experienceLevel,
-            maxDistance: profileData.maxDistance,
-            bio: profileData.bio,
-            additionalInfo: profileData.additionalInfo,
-            // Add missing fields from onboarding
-            hasDriverLicense: profileData.hasDriverLicense,
-            hasVehicle: profileData.hasVehicle,
-            hasCriminalRecord: profileData.hasCriminalRecord,
-            criminalRecordDetails: profileData.criminalRecordDetails,
-            education: profileData.education,
-            occupation: profileData.occupation,
-            dateOfBirth: profileData.dateOfBirth
-          };
-
-          // Update general user profile first
-          const userUpdateResponse = await api.put('/users/profile', generalUserData);
+          // Just send the entire data structure as is - it's already formatted correctly
+          const response = await api.put('/users/profile', profileData);
           
-          // Then update volunteer-specific profile
-          const volunteerUpdateResponse = await api.put('/users/volunteer-profile', volunteerSpecificData);
-          
-          if (userUpdateResponse.data.success && volunteerUpdateResponse.data.success) {
+          if (response.data.success) {
+            // Update local user state
             set((state) => ({
               user: {
                 ...state.user,
-                ...generalUserData,
-                ...volunteerSpecificData
+                ...profileData
               }
             }));
             return { success: true };
@@ -441,7 +404,7 @@ const useAuthStore = create(
 
           return { 
             success: false, 
-            message: 'Some profile updates failed. Please try again.' 
+            message: response.data.message || 'Profile update failed. Please try again.' 
           };
         } catch (error) {
           console.error('Error updating profile:', error);

@@ -18,14 +18,20 @@ exports.register = async (req, res) => {
       return res.status(400).json({ success: false, message: "Organization name is required for NGO accounts" });
     }
 
-    // Create new user
+    // Create new user with proper structure
     user = new User({
       name,
       email,
       password,
       role: role || 'volunteer', // Default to volunteer if not specified
-      ...(organization && { organization }), // Add organization if provided
     });
+    
+    // Add organization to ngoInfo if provided and role is NGO
+    if (role === 'ngo' && organization) {
+      user.ngoInfo = {
+        organization: organization
+      };
+    }
 
     // Hash password via pre-save middleware
     await user.save();
@@ -45,7 +51,7 @@ exports.register = async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
-        organization: user.organization,
+        organization: user.ngoInfo?.organization,
       },
     });
   } catch (error) {
@@ -122,7 +128,7 @@ exports.login = async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
-        organization: user.organization,
+        organization: user.ngoInfo?.organization,
       },
     });
   } catch (error) {

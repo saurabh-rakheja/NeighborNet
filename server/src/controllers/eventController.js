@@ -227,4 +227,184 @@ exports.getMyEvents = async (req, res) => {
       message: "Internal server error",
     });
   }
+};
+
+// Get NGO dashboard events with pagination and filtering
+exports.getNGODashboardEvents = async (req, res) => {
+  try {
+    // Check if user is NGO or admin
+    if (req.user.role !== 'ngo' && req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: "Only NGOs can access this endpoint",
+      });
+    }
+
+    const { status, search, page = 1, limit = 10 } = req.query;
+    
+    // Build query
+    const query = { 
+      organizerId: req.user.id,
+      active: true 
+    };
+    
+    if (status && status !== 'all') {
+      query.status = status;
+    }
+    
+    if (search) {
+      query.$or = [
+        { title: { $regex: search, $options: "i" } },
+        { description: { $regex: search, $options: "i" } },
+        { "location.city": { $regex: search, $options: "i" } },
+        { "location.state": { $regex: search, $options: "i" } },
+      ];
+    }
+
+    // Calculate pagination
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    
+    // Get total count
+    const total = await Event.countDocuments(query);
+    
+    // Get paginated events
+    const events = await Event.find(query)
+      .sort({ startDate: 1 })
+      .skip(skip)
+      .limit(parseInt(limit));
+    
+    // Calculate status for each event
+    const eventsWithStatus = events.map(event => {
+      const now = new Date();
+      const startDate = new Date(event.startDate);
+      const endDate = new Date(event.endDate);
+      
+      let status = 'upcoming';
+      
+      if (now > endDate) {
+        status = 'completed';
+      } else if (now >= startDate && now <= endDate) {
+        status = 'ongoing';
+      }
+      
+      // Add calculated values needed by the frontend
+      return {
+        ...event.toObject(),
+        status,
+        volunteersRegistered: event.registeredVolunteers ? event.registeredVolunteers.length : 0
+      };
+    });
+    
+    // Return the correct structure that the client expects
+    res.status(200).json({
+      success: true,
+      events: eventsWithStatus || [],
+      totalEvents: total,
+      totalPages: Math.ceil(total / parseInt(limit)),
+      currentPage: parseInt(page)
+    });
+  } catch (error) {
+    console.error("Error fetching NGO dashboard events:", error);
+    // Return an empty events array to prevent undefined errors
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      events: [],
+      totalPages: 1,
+      currentPage: 1
+    });
+  }
+};
+
+// Register a volunteer for an event
+exports.registerForEvent = async (req, res) => {
+  try {
+    const eventId = req.params.id;
+    const volunteerId = req.user.id;
+
+    // Find the event
+    const event = await Event.findById(eventId);
+    
+    if (!event) {
+      return res.status(404).json({
+        success: false,
+        message: "Event not found",
+      });
+    }
+
+    // Check if event is active
+    if (!event.active) {
+      return res.status(400).json({
+        success: false,
+        message: "This event is no longer active",
+      });
+    }
+
+    // Check if volunteer is already registered
+    const alreadyRegistered = event.registeredVolunteers.some(
+      (registration) => registration.volunteer.toString() === volunteerId
+    );
+
+    if (alreadyRegistered) {
+      return res.status(400).json({
+        success: false,
+        message: "You are already registered for this event",
+      });
+    }
+
+    // Check if event is full
+    if (event.registeredVolunteers.length >= event.volunteersNeeded) {
+      return res.status(400).json({
+        success: false,
+        message: "This event is already full",
+      });
+    }
+
+    // Add volunteer to event
+    event.registeredVolunteers.push({
+      volunteer: volunteerId,
+      status: event.requiresApproval ? 'pending' : 'approved',
+      registeredAt: new Date()
+    });
+
+    await event.save();
+
+    res.status(200).json({
+      success: true,
+      message: event.requiresApproval 
+        ? "Successfully registered. Awaiting approval from the organizer." 
+        : "Successfully registered for the event.",
+      data: event
+    });
+  } catch (error) {
+    console.error("Error registering for event:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+// Get all events for a specific NGO
+exports.getEventsByNGO = async (req, res) => {
+  try {
+    const { ngoId } = req.params;
+    
+    const events = await Event.find({
+      organizerId: ngoId,
+      active: true
+    }).sort({ startDate: 1 });
+    
+    res.status(200).json({
+      success: true,
+      count: events.length,
+      data: events,
+    });
+  } catch (error) {
+    console.error("Error fetching NGO events:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
 }; 

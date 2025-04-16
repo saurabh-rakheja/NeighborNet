@@ -91,12 +91,15 @@ const Sidebar = ({ isMobile, onToggle }) => {
       icon: <FiCalendar />,
       path: "/dashboard/events",
     },
-    {
-      name: "My Shifts",
-      icon: <FiClock />,
-      path: "/dashboard/my-shifts",
-      badge: notifications > 0 ? notifications : null,
-    },
+    // Only show My Shifts for volunteers and admins, not for NGOs
+    ...(hasNGOCapabilities ? [] : [
+      {
+        name: "My Shifts",
+        icon: <FiClock />,
+        path: "/dashboard/my-shifts",
+        badge: notifications > 0 ? notifications : null,
+      }
+    ]),
   ];
 
   // NGO specific navigation items
@@ -106,6 +109,11 @@ const Sidebar = ({ isMobile, onToggle }) => {
           name: "Create Project",
           icon: <FiPlusCircle />,
           path: "/dashboard/create-event",
+        },
+        {
+          name: "Manage Events",
+          icon: <FiCalendar />,
+          path: "/dashboard/manage-events",
         },
         {
           name: "Manage Volunteers",
@@ -133,7 +141,7 @@ const Sidebar = ({ isMobile, onToggle }) => {
   // Volunteer specific navigation items
   const volunteerNav = hasVolunteerCapabilities
     ? [
-        {
+        { 
           name: "My Profile",
           icon: <FiUser />,
           path: "/dashboard/profile",

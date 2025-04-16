@@ -78,19 +78,19 @@ const DashboardResolver = () => {
   console.log("Current user data:", user);
 
   // Check for NGO and volunteer capabilities based on user data
-  const hasNGOCapabilities = user?.organization || user?.role === "ngo";
+  const hasNGOCapabilities = 
+    user?.ngoInfo?.organization || 
+    user?.role === "ngo";
+    
   const hasVolunteerCapabilities =
-    user?.skills?.length > 0 || user?.role === "volunteer";
+    user?.volunteerInfo?.skills?.length > 0 || 
+    user?.role === "volunteer";
 
-  // If user has both capabilities, show a unified dashboard with both feature sets
+  // If user has both capabilities, redirect to the appropriate dashboard
   // Otherwise, prioritize the capability they have
-  if (hasNGOCapabilities && hasVolunteerCapabilities) {
-    console.log("User has both NGO and volunteer capabilities");
-    // In the future, we could create a unified dashboard component, but for now use the NGO dashboard
-    return <NGODashboard />;
-  } else if (hasNGOCapabilities) {
-    console.log("User has NGO capabilities");
-    return <NGODashboard />;
+  if (hasNGOCapabilities) {
+    console.log("User has NGO capabilities, redirecting to NGO dashboard");
+    return <Navigate to="/ngo-dashboard" replace />;
   } else {
     console.log("User has volunteer capabilities or no specific capabilities");
     return <VolunteerDashboard />;
@@ -115,34 +115,18 @@ const router = createBrowserRouter(
 
       {/* Protected Dashboard Routes */}
       <Route element={<ProtectedRoute />}>
+        {/* NGO Dashboard with its own layout and child routes */}
+        <Route path="ngo-dashboard/*" element={<NGODashboard />} />
+        
+        {/* Standard Dashboard Layout for Volunteer */}
         <Route element={<DashboardLayout />}>
-          {/* Main dashboard (resolves to NGO or Volunteer dashboard based on role) */}
+          {/* Main dashboard (resolves to Volunteer dashboard since NGO users are redirected) */}
           <Route path="dashboard" element={<DashboardResolver />} />
 
-          {/* Common routes for both roles */}
+          {/* Common routes */}
           <Route path="dashboard/events" element={<Events />} />
           <Route path="dashboard/events/:id" element={<EventDetail />} />
           <Route path="dashboard/my-shifts" element={<MyShifts />} />
-
-          {/* NGO specific routes */}
-          <Route path="dashboard/create-event" element={<CreateEvent />} />
-          <Route
-            path="dashboard/events/:eventId/shifts/create"
-            element={<CreateShift />}
-          />
-          <Route
-            path="dashboard/manage-volunteers"
-            element={<VolunteerList />}
-          />
-          <Route path="dashboard/applications" element={<Applications />} />
-          <Route path="dashboard/messages" element={<Messages />} />
-
-          {/* New NGO Routes - Added Components */}
-          <Route
-            path="dashboard/event-management"
-            element={<EventManagement />}
-          />
-          <Route path="dashboard/analytics" element={<NGOAnalytics />} />
 
           {/* Volunteer specific routes */}
           <Route
@@ -153,8 +137,6 @@ const router = createBrowserRouter(
           <Route path="dashboard/skills" element={<Skills />} />
           <Route path="dashboard/certificates" element={<Certificates />} />
           <Route path="dashboard/training" element={<Training />} />
-
-          {/* New Volunteer Routes - Added Components */}
           <Route
             path="dashboard/find-opportunities"
             element={<OpportunitySearch />}

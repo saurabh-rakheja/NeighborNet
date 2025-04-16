@@ -19,20 +19,22 @@ exports.register = async (req, res) => {
         .json({ success: false, message: "User already exists" });
     }
 
-    // Validate NGO registration
-    if (role === "ngo" && !organization) {
-      // Use name as organization name if not provided
-      req.body.organization = name;
-    }
-
-    // Create new user
+    // Create new user with proper structure
     const userData = {
       name,
       email,
       password,
       role: role || "volunteer",
-      ...(organization && { organization }),
     };
+    
+    // Add organization to ngoInfo if provided and role is NGO
+    if (role === 'ngo') {
+      // Use name as organization name if not provided
+      const orgName = organization || name;
+      userData.ngoInfo = {
+        organization: orgName
+      };
+    }
 
     const user = await User.create(userData);
 
@@ -51,7 +53,7 @@ exports.register = async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
-        organization: user.organization,
+        organization: user.ngoInfo?.organization,
       },
     });
   } catch (error) {
@@ -123,7 +125,7 @@ exports.login = async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
-        organization: user.organization,
+        organization: user.ngoInfo?.organization,
       },
     });
   } catch (error) {
@@ -159,13 +161,15 @@ exports.registerNGO = async (req, res) => {
         .json({ success: false, message: "User already exists" });
     }
 
-    // Create new NGO user
+    // Create new NGO user with proper structure
     const user = await User.create({
       name,
       email,
       password,
       role: "ngo",
-      organization: orgName,
+      ngoInfo: {
+        organization: orgName
+      }
     });
 
     // Generate JWT
@@ -183,7 +187,7 @@ exports.registerNGO = async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
-        organization: user.organization,
+        organization: user.ngoInfo.organization,
       },
     });
   } catch (error) {

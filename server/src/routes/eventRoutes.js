@@ -42,4 +42,17 @@ router.get(
   eventController.getMyEvents
 );
 
+// Get NGO events with pagination and filtering - NGO dashboard endpoint
+router.get(
+  "/ngo/dashboard",
+  authorizeRoles("ngo", "admin"),
+  eventController.getNGODashboardEvents
+);
+
+// POST register for an event (Volunteer only)
+router.post('/:id/register', authorizeRoles("volunteer"), eventController.registerForEvent);
+
+// GET all events for an NGO
+router.get('/ngo/:ngoId', eventController.getEventsByNGO);
+
 module.exports = router; 

@@ -116,7 +116,7 @@ const VolunteerProfile = () => {
     city: "",
     state: "",
     zipCode: "",
-    country: "United States",
+    country: "India",
     bio: "",
     birthdate: "",
     // Volunteer specific fields
@@ -179,44 +179,44 @@ const VolunteerProfile = () => {
             name: userData.name || "",
             email: userData.email || "",
             role: userData.role || "volunteer",
-            phone: userData.phoneNumber || "",
-            address: userData.address?.street || "",
-            city: userData.address?.city || "",
-            state: userData.address?.state || "",
-            zipCode: userData.address?.zipCode || "",
-            country: userData.address?.country || "United States",
-            bio: userData.bio || "",
-            birthdate: userData.dateOfBirth ? new Date(userData.dateOfBirth).toISOString().split('T')[0] : "",
+            phone: userData.profile?.phoneNumber || "",
+            address: userData.profile?.address?.street || "",
+            city: userData.profile?.address?.city || "",
+            state: userData.profile?.address?.state || "",
+            zipCode: userData.profile?.address?.zipCode || "",
+            country: userData.profile?.address?.country || "India",
+            bio: userData.profile?.bio || "",
+            birthdate: userData.volunteerInfo?.dateOfBirth ? new Date(userData.volunteerInfo.dateOfBirth).toISOString().split('T')[0] : "",
             // Volunteer specific fields
-            availability: userData.availability || {},
-            skills: userData.skills || [],
-            interests: userData.interests || [],
-            preferredLocations: userData.preferredLocations || [],
-            experience: userData.experience || "Beginner",
+            availability: userData.volunteerInfo?.availability || {},
+            skills: userData.volunteerInfo?.skills || [],
+            interests: userData.volunteerInfo?.interests || [],
+            preferredLocations: userData.volunteerInfo?.preferredLocations || [],
+            experience: userData.volunteerInfo?.experience || "Beginner",
             emergencyContact: {
-              name: userData.emergencyContact?.name || "",
-              relationship: userData.emergencyContact?.relationship || "",
-              phone: userData.emergencyContact?.phone || ""
+              name: userData.volunteerInfo?.emergencyContact?.name || "",
+              relationship: userData.volunteerInfo?.emergencyContact?.relationship || "",
+              phone: userData.volunteerInfo?.emergencyContact?.phone || ""
             },
-            education: userData.education || "",
-            occupation: userData.occupation || "",
-            maxDistance: userData.maxDistance || 15,
-            hasDriverLicense: userData.hasDriverLicense || false,
-            hasVehicle: userData.hasVehicle || false,
-            hasCriminalRecord: userData.hasCriminalRecord || false,
-            criminalRecordDetails: userData.criminalRecordDetails || "",
-            additionalInfo: userData.additionalInfo || "",
-            totalHours: userData.totalHours || 0,
+            education: userData.volunteerInfo?.education || "",
+            occupation: userData.volunteerInfo?.occupation || "",
+            maxDistance: userData.volunteerInfo?.maxDistance || 15,
+            hasDriverLicense: userData.volunteerInfo?.hasDriverLicense || false,
+            hasVehicle: userData.volunteerInfo?.hasVehicle || false,
+            hasCriminalRecord: userData.volunteerInfo?.hasCriminalRecord || false,
+            criminalRecordDetails: userData.volunteerInfo?.criminalRecordDetails || "",
+            additionalInfo: userData.volunteerInfo?.additionalInfo || "",
+            totalHours: userData.volunteerInfo?.totalHours || 0,
             // NGO specific fields
-            organization: userData.organization || "",
-            organizationDescription: userData.organizationDetails?.description || "",
-            organizationWebsite: userData.organizationDetails?.website || "",
-            organizationMission: userData.organizationDetails?.mission || "",
-            organizationFoundedYear: userData.organizationDetails?.foundedYear || "",
-            organizationSize: userData.organizationDetails?.size || "",
-            organizationRegistrationNumber: userData.organizationDetails?.registrationNumber || "",
-            organizationTaxId: userData.organizationDetails?.taxId || "",
-            organizationLogo: userData.organizationLogo || ""
+            organization: userData.ngoInfo?.organization || "",
+            organizationDescription: userData.ngoInfo?.details?.description || "",
+            organizationWebsite: userData.ngoInfo?.details?.website || "",
+            organizationMission: userData.ngoInfo?.details?.mission || "",
+            organizationFoundedYear: userData.ngoInfo?.details?.foundedYear || "",
+            organizationSize: userData.ngoInfo?.details?.size || "",
+            organizationRegistrationNumber: userData.ngoInfo?.details?.registrationNumber || "",
+            organizationTaxId: userData.ngoInfo?.details?.taxId || "",
+            organizationLogo: userData.ngoInfo?.logo || ""
           });
         } else {
           toast.error("Failed to load profile data");
@@ -242,7 +242,7 @@ const VolunteerProfile = () => {
               city: profile.city || "",
               state: profile.state || "",
               zipCode: profile.zipCode || "",
-              country: "United States",
+              country: "India",
               bio: profile.bio || "",
               birthdate: profile.birthdate ? new Date(profile.birthdate).toISOString().split('T')[0] : "",
               availability: profile.availability || {},
@@ -432,64 +432,65 @@ const VolunteerProfile = () => {
       // Prepare data for API update - map to match userSchema
       const apiUpdateData = {
         name: formData.name,
-        phoneNumber: formData.phone,
-        address: {
-          street: formData.address,
-          city: formData.city,
-          state: formData.state,
-          zipCode: formData.zipCode,
-          country: formData.country
+        profile: {
+          phoneNumber: formData.phone,
+          address: {
+            street: formData.address,
+            city: formData.city,
+            state: formData.state,
+            zipCode: formData.zipCode,
+            country: formData.country
+          },
+          bio: formData.bio,
         },
-        bio: formData.bio,
-        dateOfBirth: formData.birthdate,
         
         // Volunteer-specific fields
-        skills: formData.skills,
-        interests: formData.interests,
-        experience: formData.experience,
-        preferredLocations: formData.preferredLocations,
-        availability: formData.availability,
-        emergencyContact: {
-          name: formData.emergencyContact.name,
-          relationship: formData.emergencyContact.relationship,
-          phone: formData.emergencyContact.phone
-        },
-        education: formData.education,
-        occupation: formData.occupation,
-        maxDistance: Number(formData.maxDistance),
-        hasDriverLicense: formData.hasDriverLicense,
-        hasVehicle: formData.hasVehicle,
-        hasCriminalRecord: formData.hasCriminalRecord,
-        criminalRecordDetails: formData.criminalRecordDetails,
-        additionalInfo: formData.additionalInfo,
+        volunteerInfo: {
+          dateOfBirth: formData.birthdate,
+          skills: formData.skills,
+          interests: formData.interests,
+          experience: formData.experience,
+          preferredLocations: formData.preferredLocations,
+          availability: formData.availability,
+          emergencyContact: {
+            name: formData.emergencyContact.name,
+            relationship: formData.emergencyContact.relationship,
+            phone: formData.emergencyContact.phone
+          },
+          education: formData.education,
+          occupation: formData.occupation,
+          maxDistance: Number(formData.maxDistance),
+          hasDriverLicense: formData.hasDriverLicense,
+          hasVehicle: formData.hasVehicle,
+          hasCriminalRecord: formData.hasCriminalRecord,
+          criminalRecordDetails: formData.criminalRecordDetails,
+          additionalInfo: formData.additionalInfo,
+        }
       };
       
       // Only add organization fields if the user is an NGO
       if (formData.role === 'ngo') {
-        apiUpdateData.organization = formData.organization;
+        apiUpdateData.ngoInfo = {
+          organization: formData.organization,
+          details: {}
+        };
         
         // Only include valid organizational details (skip empty enum fields)
-        const organizationDetails = {};
-        if (formData.organizationDescription) organizationDetails.description = formData.organizationDescription;
-        if (formData.organizationWebsite) organizationDetails.website = formData.organizationWebsite;
-        if (formData.organizationMission) organizationDetails.mission = formData.organizationMission;
-        if (formData.organizationFoundedYear) organizationDetails.foundedYear = formData.organizationFoundedYear;
-        if (formData.organizationRegistrationNumber) organizationDetails.registrationNumber = formData.organizationRegistrationNumber;
-        if (formData.organizationTaxId) organizationDetails.taxId = formData.organizationTaxId;
+        if (formData.organizationDescription) apiUpdateData.ngoInfo.details.description = formData.organizationDescription;
+        if (formData.organizationWebsite) apiUpdateData.ngoInfo.details.website = formData.organizationWebsite;
+        if (formData.organizationMission) apiUpdateData.ngoInfo.details.mission = formData.organizationMission;
+        if (formData.organizationFoundedYear) apiUpdateData.ngoInfo.details.foundedYear = formData.organizationFoundedYear;
+        if (formData.organizationRegistrationNumber) apiUpdateData.ngoInfo.details.registrationNumber = formData.organizationRegistrationNumber;
+        if (formData.organizationTaxId) apiUpdateData.ngoInfo.details.taxId = formData.organizationTaxId;
         
         // Handle enum field - don't send empty string
         if (formData.organizationSize) {
-          organizationDetails.size = formData.organizationSize;
-        }
-        
-        // Only add the organizationDetails if at least one property exists
-        if (Object.keys(organizationDetails).length > 0) {
-          apiUpdateData.organizationDetails = organizationDetails;
+          apiUpdateData.ngoInfo.details.size = formData.organizationSize;
         }
         
         // Add logo only if it exists
         if (formData.organizationLogo) {
-          apiUpdateData.organizationLogo = formData.organizationLogo;
+          apiUpdateData.ngoInfo.logo = formData.organizationLogo;
         }
       }
       
@@ -545,44 +546,44 @@ const VolunteerProfile = () => {
       setFormData({
         name: userData.name || "",
         email: userData.email || "",
-        phone: userData.phoneNumber || "",
-        address: userData.address?.street || "",
-        city: userData.address?.city || "",
-        state: userData.address?.state || "",
-        zipCode: userData.address?.zipCode || "",
-        country: userData.address?.country || "United States",
-        bio: userData.bio || "",
-        birthdate: userData.dateOfBirth ? new Date(userData.dateOfBirth).toISOString().split('T')[0] : "",
+        phone: userData.profile?.phoneNumber || "",
+        address: userData.profile?.address?.street || "",
+        city: userData.profile?.address?.city || "",
+        state: userData.profile?.address?.state || "",
+        zipCode: userData.profile?.address?.zipCode || "",
+        country: userData.profile?.address?.country || "India",
+        bio: userData.profile?.bio || "",
+        birthdate: userData.volunteerInfo?.dateOfBirth ? new Date(userData.volunteerInfo.dateOfBirth).toISOString().split('T')[0] : "",
         // Make sure we include all fields here too
-        availability: userData.availability || {},
-        skills: userData.skills || [],
-        interests: userData.interests || [],
-        preferredLocations: userData.preferredLocations || [],
-        experience: userData.experience || "Beginner",
+        availability: userData.volunteerInfo?.availability || {},
+        skills: userData.volunteerInfo?.skills || [],
+        interests: userData.volunteerInfo?.interests || [],
+        preferredLocations: userData.volunteerInfo?.preferredLocations || [],
+        experience: userData.volunteerInfo?.experience || "Beginner",
         emergencyContact: {
-          name: userData.emergencyContact?.name || "",
-          relationship: userData.emergencyContact?.relationship || "",
-          phone: userData.emergencyContact?.phone || ""
+          name: userData.volunteerInfo?.emergencyContact?.name || "",
+          relationship: userData.volunteerInfo?.emergencyContact?.relationship || "",
+          phone: userData.volunteerInfo?.emergencyContact?.phone || ""
         },
-        education: userData.education || "",
-        occupation: userData.occupation || "",
-        maxDistance: userData.maxDistance || 15,
-        hasDriverLicense: userData.hasDriverLicense || false,
-        hasVehicle: userData.hasVehicle || false,
-        hasCriminalRecord: userData.hasCriminalRecord || false,
-        criminalRecordDetails: userData.criminalRecordDetails || "",
-        additionalInfo: userData.additionalInfo || "",
-        totalHours: userData.totalHours || 0,
+        education: userData.volunteerInfo?.education || "",
+        occupation: userData.volunteerInfo?.occupation || "",
+        maxDistance: userData.volunteerInfo?.maxDistance || 15,
+        hasDriverLicense: userData.volunteerInfo?.hasDriverLicense || false,
+        hasVehicle: userData.volunteerInfo?.hasVehicle || false,
+        hasCriminalRecord: userData.volunteerInfo?.hasCriminalRecord || false,
+        criminalRecordDetails: userData.volunteerInfo?.criminalRecordDetails || "",
+        additionalInfo: userData.volunteerInfo?.additionalInfo || "",
+        totalHours: userData.volunteerInfo?.totalHours || 0,
         // NGO specific fields
-        organization: userData.organization || "",
-        organizationDescription: userData.organizationDetails?.description || "",
-        organizationWebsite: userData.organizationDetails?.website || "",
-        organizationMission: userData.organizationDetails?.mission || "",
-        organizationFoundedYear: userData.organizationDetails?.foundedYear || "",
-        organizationSize: userData.organizationDetails?.size || "",
-        organizationRegistrationNumber: userData.organizationDetails?.registrationNumber || "",
-        organizationTaxId: userData.organizationDetails?.taxId || "",
-        organizationLogo: userData.organizationLogo || ""
+        organization: userData.ngoInfo?.organization || "",
+        organizationDescription: userData.ngoInfo?.details?.description || "",
+        organizationWebsite: userData.ngoInfo?.details?.website || "",
+        organizationMission: userData.ngoInfo?.details?.mission || "",
+        organizationFoundedYear: userData.ngoInfo?.details?.foundedYear || "",
+        organizationSize: userData.ngoInfo?.details?.size || "",
+        organizationRegistrationNumber: userData.ngoInfo?.details?.registrationNumber || "",
+        organizationTaxId: userData.ngoInfo?.details?.taxId || "",
+        organizationLogo: userData.ngoInfo?.logo || ""
       });
     }
     setEditMode(false);
@@ -658,6 +659,30 @@ const VolunteerProfile = () => {
                 </>
               )}
             </div>
+          </div>
+        </div>
+      </div>
+      
+      {/* Volunteer Statistics Section - Moved here */}
+      <div className="bg-white rounded-xl shadow-md p-6 mb-8">
+        <h2 className="text-xl font-semibold mb-4 text-gray-800 flex items-center">
+          <FiBarChart2 className="mr-2 text-indigo-500" /> Volunteer Statistics
+        </h2>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="bg-indigo-50 rounded-lg p-4 text-center">
+            <h3 className="font-medium text-gray-700 mb-2">Total Hours</h3>
+            <p className="text-3xl font-bold text-indigo-600">{formData.totalHours}</p>
+          </div>
+          
+          <div className="bg-indigo-50 rounded-lg p-4 text-center">
+            <h3 className="font-medium text-gray-700 mb-2">Experience Level</h3>
+            <p className="text-3xl font-bold text-indigo-600">{formData.experience}</p>
+          </div>
+          
+          <div className="bg-indigo-50 rounded-lg p-4 text-center">
+            <h3 className="font-medium text-gray-700 mb-2">Preferred Locations</h3>
+            <p className="text-3xl font-bold text-indigo-600">{formData.preferredLocations.length}</p>
           </div>
         </div>
       </div>
@@ -768,6 +793,25 @@ const VolunteerProfile = () => {
               
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Country
+                </label>
+                <select
+                  name="country"
+                  value={formData.country}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  <option value="India">India</option>
+                  <option value="United States">United States</option>
+                  <option value="Canada">Canada</option>
+                  <option value="United Kingdom">United Kingdom</option>
+                  <option value="Australia">Australia</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
                   Birthdate
                 </label>
                 <input
@@ -802,7 +846,7 @@ const VolunteerProfile = () => {
                 <div>
                   <p className="text-sm text-gray-500">Address</p>
                   <p className="text-gray-700">
-                    {formData.address || formData.city || formData.state || formData.zipCode ? (
+                    {formData.address || formData.city || formData.state || formData.zipCode || formData.country ? (
                       <>
                         {formData.address || ""}
                         {(formData.city || formData.state || formData.zipCode) && (
@@ -813,6 +857,11 @@ const VolunteerProfile = () => {
                               formData.state || "", 
                               formData.zipCode || ""
                             ].filter(Boolean).join(", ")}
+                          </>
+                        )}
+                        {formData.country && (
+                          <>
+                            <br />{formData.country}
                           </>
                         )}
                       </>
@@ -1231,70 +1280,142 @@ const VolunteerProfile = () => {
         
         {editMode ? (
           <div className="space-y-6">
-            <p className="text-sm text-gray-500">Select the times you're available to volunteer for each day of the week</p>
+            <p className="text-sm text-gray-500 mb-4">Select the times you're available to volunteer each day</p>
             
-            {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map((day) => (
-              <div key={day} className="border-b pb-4 last:border-0">
-                <h3 className="capitalize font-medium text-gray-700 mb-2">{day}</h3>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-                  {['morning', 'afternoon', 'evening'].map((timeSlot) => (
-                    <label key={`${day}-${timeSlot}`} className="flex items-center p-2 border rounded-md hover:bg-gray-50">
-                      <input
-                        type="checkbox"
-                        checked={formData.availability[day]?.includes(timeSlot) || false}
-                        onChange={(e) => {
-                          const currentSlots = formData.availability[day] || [];
-                          let newSlots;
-                          
-                          if (e.target.checked) {
-                            newSlots = [...currentSlots, timeSlot];
-                          } else {
-                            newSlots = currentSlots.filter(slot => slot !== timeSlot);
-                          }
-                          
-                          setFormData({
-                            ...formData,
-                            availability: {
-                              ...formData.availability,
-                              [day]: newSlots
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map((day) => (
+                <div key={day} className="bg-gray-50 rounded-lg p-4 hover:shadow-sm transition-shadow">
+                  <h3 className="capitalize font-medium text-gray-700 mb-3 pb-2">{day}</h3>
+                  <div className="space-y-2">
+                    {['morning', 'afternoon', 'evening'].map((timeSlot) => (
+                      <label 
+                        key={`${day}-${timeSlot}`} 
+                        className={`flex items-center p-2 rounded-md cursor-pointer transition-colors ${
+                          formData.availability[day]?.includes(timeSlot) 
+                            ? 'bg-indigo-100 text-indigo-700' 
+                            : 'hover:bg-gray-100'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={formData.availability[day]?.includes(timeSlot) || false}
+                          onChange={(e) => {
+                            const currentSlots = formData.availability[day] || [];
+                            let newSlots;
+                            
+                            if (e.target.checked) {
+                              newSlots = [...currentSlots, timeSlot];
+                            } else {
+                              newSlots = currentSlots.filter(slot => slot !== timeSlot);
                             }
-                          });
-                        }}
-                        className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                      />
-                      <span className="ml-2 text-sm text-gray-700 capitalize">{timeSlot}</span>
-                    </label>
-                  ))}
+                            
+                            setFormData({
+                              ...formData,
+                              availability: {
+                                ...formData.availability,
+                                [day]: newSlots
+                              }
+                            });
+                          }}
+                          className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                        />
+                        <div className="ml-3 flex items-center">
+                          <span className={`text-sm ${formData.availability[day]?.includes(timeSlot) ? 'font-medium' : ''}`}>
+                            {timeSlot === 'morning' && '🌅 '}
+                            {timeSlot === 'afternoon' && '☀️ '}
+                            {timeSlot === 'evening' && '🌙 '}
+                            <span className="capitalize">{timeSlot}</span>
+                          </span>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
+            
+            <div className="flex flex-wrap justify-center mt-4 gap-2">
+              <button 
+                type="button"
+                onClick={() => {
+                  // Quick select all weekday mornings
+                  const newAvailability = {...formData.availability};
+                  ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'].forEach(day => {
+                    newAvailability[day] = ['morning'];
+                  });
+                  setFormData({...formData, availability: newAvailability});
+                }}
+                className="text-xs bg-indigo-50 text-indigo-600 hover:bg-indigo-100 px-3 py-1 rounded-md"
+              >
+                Weekday Mornings
+              </button>
+              <button 
+                type="button"
+                onClick={() => {
+                  // Quick select all weekend days
+                  const newAvailability = {...formData.availability};
+                  ['saturday', 'sunday'].forEach(day => {
+                    newAvailability[day] = ['morning', 'afternoon', 'evening'];
+                  });
+                  setFormData({...formData, availability: newAvailability});
+                }}
+                className="text-xs bg-indigo-50 text-indigo-600 hover:bg-indigo-100 px-3 py-1 rounded-md"
+              >
+                All Weekend
+              </button>
+              <button 
+                type="button"
+                onClick={() => {
+                  // Clear all selections
+                  setFormData({...formData, availability: {}});
+                }}
+                className="text-xs bg-red-50 text-red-600 hover:bg-red-100 px-3 py-1 rounded-md"
+              >
+                Clear All
+              </button>
+            </div>
           </div>
         ) : (
           <div className="space-y-4">
             {Object.keys(formData.availability || {}).length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map((day) => (
-                  <div key={day} className="border rounded-md p-3">
-                    <h3 className="capitalize font-medium text-gray-700 mb-2">{day}</h3>
+                  <div key={day} className={`rounded-lg p-4 transition-all ${
+                    formData.availability[day]?.length > 0 
+                      ? 'bg-gray-50' 
+                      : 'bg-gray-50 text-gray-400'
+                  }`}>
+                    <h3 className="capitalize font-medium mb-2 flex items-center">
+                      {day === 'saturday' || day === 'sunday' ? '🔆 ' : '📅 '}
+                      {day}
+                    </h3>
+                    
                     {formData.availability[day]?.length > 0 ? (
                       <div className="flex flex-wrap gap-2">
                         {formData.availability[day].map((timeSlot, index) => (
                           <span 
                             key={index}
-                            className="bg-indigo-100 text-indigo-800 px-2 py-1 rounded-full text-xs capitalize"
+                            className="bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-xs capitalize flex items-center"
                           >
+                            {timeSlot === 'morning' && '🌅 '}
+                            {timeSlot === 'afternoon' && '☀️ '}
+                            {timeSlot === 'evening' && '🌙 '}
                             {timeSlot}
                           </span>
                         ))}
                       </div>
                     ) : (
-                      <p className="text-gray-500 text-sm italic">Not available</p>
+                      <p className="text-gray-400 text-sm italic">Not available</p>
                     )}
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-gray-500 text-sm italic">No availability schedule provided</p>
+              <div className="text-center py-8 bg-gray-50 rounded-lg">
+                <FiClock className="mx-auto h-10 w-10 text-gray-300 mb-2" />
+                <p className="text-gray-500">No availability schedule provided</p>
+                <p className="text-sm text-gray-400 mt-1">Click 'Edit Profile' to set your volunteer availability</p>
+              </div>
             )}
           </div>
         )}
@@ -1581,30 +1702,6 @@ const VolunteerProfile = () => {
               )}
             </div>
           )}
-        </div>
-      </div>
-      
-      {/* Volunteer Statistics Section */}
-      <div className="mt-8 bg-white rounded-xl shadow-md p-6">
-        <h2 className="text-xl font-semibold mb-4 text-gray-800 flex items-center">
-          <FiBarChart2 className="mr-2 text-indigo-500" /> Volunteer Statistics
-        </h2>
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-indigo-50 rounded-lg p-4 text-center">
-            <h3 className="font-medium text-gray-700 mb-2">Total Hours</h3>
-            <p className="text-3xl font-bold text-indigo-600">{formData.totalHours}</p>
-          </div>
-          
-          <div className="bg-indigo-50 rounded-lg p-4 text-center">
-            <h3 className="font-medium text-gray-700 mb-2">Experience Level</h3>
-            <p className="text-3xl font-bold text-indigo-600">{formData.experience}</p>
-          </div>
-          
-          <div className="bg-indigo-50 rounded-lg p-4 text-center">
-            <h3 className="font-medium text-gray-700 mb-2">Preferred Locations</h3>
-            <p className="text-3xl font-bold text-indigo-600">{formData.preferredLocations.length}</p>
-          </div>
         </div>
       </div>
       

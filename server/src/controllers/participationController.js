@@ -428,7 +428,10 @@ exports.checkOutVolunteer = async (req, res) => {
     // Update volunteer's total hours in user model
     const volunteer = await User.findById(participation.volunteerId);
     if (volunteer) {
-      volunteer.totalHours = (volunteer.totalHours || 0) + participation.hoursLogged;
+      if (!volunteer.volunteerInfo) {
+        volunteer.volunteerInfo = {};
+      }
+      volunteer.volunteerInfo.totalHours = (volunteer.volunteerInfo.totalHours || 0) + participation.hoursLogged;
       await volunteer.save();
     }
 

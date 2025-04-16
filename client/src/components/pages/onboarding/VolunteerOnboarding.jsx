@@ -27,7 +27,7 @@ const VolunteerOnboarding = () => {
   const { profile, fetchProfile, isLoading: profileLoading } = useUserStore();
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isLoadingData, setIsLoadingData] = useState(true);
+  const [isLoadingData, setIsLoadingData] = useState(false);
   const [fetchError, setFetchError] = useState(null);
   const hasInitialized = useRef(false);
   
@@ -81,120 +81,69 @@ const VolunteerOnboarding = () => {
   
   // Fetch user data when component mounts
   useEffect(() => {
+    // Skip data fetching if we've already loaded it
+    if (hasInitialized.current) {
+      return;
+    }
+    
+    // Mark as initialized to prevent future fetches
+    hasInitialized.current = true;
+    
     const fetchUserData = async () => {
-      // Only fetch if we haven't already initialized
-      if (!hasInitialized.current) {
-        hasInitialized.current = true;
-        setIsLoadingData(true);
-        setFetchError(null);
-        
-        try {
-          // Skip API calls if no auth token
-          if (!localStorage.getItem('auth-token')) {
-            setFetchError('No authentication token found. Please log in again.');
-            setIsLoadingData(false);
-            return;
-          }
+      try {
+        // Simple check for existing user data - only fetch if needed
+        if (user) {
+          // Use existing user data
+          const updatedFormData = {
+            name: user.name || '',
+            phone: user.profile?.phoneNumber || '',
+            address: user.profile?.address?.street || '',
+            city: user.profile?.address?.city || '',
+            state: user.profile?.address?.state || '',
+            zipCode: user.profile?.address?.zipCode || '',
+            country: user.profile?.address?.country || 'India',
+            dateOfBirth: user.volunteerInfo?.dateOfBirth || '',
+            bio: user.profile?.bio || '',
+            education: user.volunteerInfo?.education || '',
+            occupation: user.volunteerInfo?.occupation || '',
+            experience: user.volunteerInfo?.experience || 'Beginner',
+            emergencyContact: user.volunteerInfo?.emergencyContact || {
+              name: '',
+              relationship: '',
+              phone: ''
+            },
+            skills: user.volunteerInfo?.skills || [],
+            interests: user.volunteerInfo?.interests || [],
+            availability: user.volunteerInfo?.availability || {
+              monday: [],
+              tuesday: [],
+              wednesday: [],
+              thursday: [],
+              friday: [],
+              saturday: [],
+              sunday: []
+            },
+            preferredLocations: user.volunteerInfo?.preferredLocations || [],
+            maxDistance: user.volunteerInfo?.maxDistance || 15,
+            hasDriverLicense: user.volunteerInfo?.hasDriverLicense || false,
+            hasVehicle: user.volunteerInfo?.hasVehicle || false,
+            hasCriminalRecord: false,
+            criminalRecordDetails: '',
+            additionalInfo: user.volunteerInfo?.additionalInfo || ''
+          };
           
-          // Try to get data directly from store first
-          if (user) {
-            // Set initial data with what we have
-            setFormData(prevData => ({
-              ...prevData,
-              name: user.name || prevData.name || '',
-              phone: user.phone || prevData.phone || '',
-              address: user.address?.street || prevData.address || '',
-              city: user.address?.city || prevData.city || '',
-              state: user.address?.state || prevData.state || '',
-              zipCode: user.address?.zipCode || prevData.zipCode || '',
-              country: user.address?.country || 'India',
-            }));
-          }
-          
-          // Refresh auth data first
-          const authResult = await refreshUserData();
-          
-          // Then fetch detailed profile data
-          const profileResult = await fetchProfile();
-          
-          // Get user directly from the result
-          const currentUser = authResult.success ? authResult.user : user;
-          
-          // Get the profile data from the result
-          const currentProfile = profileResult.success ? profileResult.profile : profile;
-          
-          if (!currentUser && !user) {
-            setFetchError('Could not load user data. You can still continue with manual entry.');
-          } else {
-            // Use whatever data we have
-            const updatedFormData = {
-              // Personal Information from auth user data
-              name: (currentUser || user)?.name || '',
-              phone: (currentUser || user)?.phone || (currentProfile || profile)?.phone || '',
-              address: (currentUser || user)?.address?.street || 
-                      (currentProfile || profile)?.address?.street || '',
-              city: (currentUser || user)?.address?.city || 
-                   (currentProfile || profile)?.address?.city || '',
-              state: (currentUser || user)?.address?.state || 
-                    (currentProfile || profile)?.address?.state || '',
-              zipCode: (currentUser || user)?.address?.zipCode || 
-                      (currentProfile || profile)?.address?.zipCode || '',
-              country: (currentUser || user)?.address?.country || 
-                     (currentProfile || profile)?.address?.country || 'India',
-              dateOfBirth: (currentProfile || profile)?.dateOfBirth || '',
-              
-              // Profile information
-              bio: (currentProfile || profile)?.bio || '',
-              education: (currentProfile || profile)?.education || '',
-              occupation: (currentProfile || profile)?.occupation || '',
-              experience: (currentProfile || profile)?.experience || 'Beginner',
-              emergencyContact: (currentProfile || profile)?.emergencyContact || {
-                name: '',
-                relationship: '',
-                phone: ''
-              },
-              
-              // Skills & Interests
-              skills: (currentProfile || profile)?.skills || [],
-              interests: (currentProfile || profile)?.interests || [],
-              
-              // Availability and preferences
-              availability: (currentProfile || profile)?.availability || {
-                monday: [],
-                tuesday: [],
-                wednesday: [],
-                thursday: [],
-                friday: [],
-                saturday: [],
-                sunday: []
-              },
-              preferredLocations: (currentProfile || profile)?.preferredLocations || [],
-              maxDistance: (currentProfile || profile)?.maxDistance || 15,
-              
-              // Additional information
-              hasDriverLicense: (currentProfile || profile)?.hasDriverLicense || false,
-              hasVehicle: (currentProfile || profile)?.hasVehicle || false,
-              hasCriminalRecord: false,
-              criminalRecordDetails: '',
-              additionalInfo: (currentProfile || profile)?.additionalInfo || ''
-            };
-            
-            setFormData(updatedFormData);
-            
-            if (authResult.success || profileResult.success) {
-              toast.success('Profile data loaded');
-            }
-          }
-        } catch (error) {
-          setFetchError('Error loading profile data. You can continue with manual entry.');
-        } finally {
-          setIsLoadingData(false);
+          setFormData(updatedFormData);
         }
+      } catch (error) {
+        console.error('Error initializing form data:', error);
+        // Continue with default form values
       }
     };
     
     fetchUserData();
-  }, [refreshUserData, fetchProfile, user, profile]);
+  // Only run once on mount  
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   
   const totalSteps = 5;
   
@@ -465,133 +414,79 @@ const VolunteerOnboarding = () => {
     setIsSubmitting(true);
     
     try {
-      // Step 1: Try to update the user profile
-      const result = await useAuthStore.getState().updateUserProfile(formData);
-      
-      if (result.success) {
-        toast.success('Profile updated successfully!');
-        
-        // Force a refresh of user data to ensure the store is up to date
-        try {
-          await refreshUserData();
-        } catch (refreshError) {
-          // Continue even if refresh fails
+      // Format data for API submission
+      const formattedData = {
+        name: formData.name,
+        profile: {
+          phoneNumber: formData.phone,
+          address: {
+            street: formData.address,
+            city: formData.city,
+            state: formData.state,
+            zipCode: formData.zipCode,
+            country: formData.country
+          },
+          bio: formData.bio
+        },
+        volunteerInfo: {
+          dateOfBirth: formData.dateOfBirth,
+          education: formData.education,
+          occupation: formData.occupation,
+          experience: formData.experience,
+          emergencyContact: formData.emergencyContact,
+          skills: formData.skills,
+          interests: formData.interests,
+          availability: formData.availability,
+          preferredLocations: formData.preferredLocations,
+          maxDistance: Number(formData.maxDistance),
+          hasDriverLicense: formData.hasDriverLicense,
+          hasVehicle: formData.hasVehicle,
+          hasCriminalRecord: formData.hasCriminalRecord,
+          criminalRecordDetails: formData.criminalRecordDetails,
+          additionalInfo: formData.additionalInfo
         }
+      };
+      
+      // Submit the data
+      const result = await updateUserProfile(formattedData);
+      
+      if (result && result.success) {
+        // Show success message
+        toast.success('Onboarding completed successfully!');
         
-        // Redirect to dashboard
+        // Navigate to dashboard
         navigate('/dashboard');
       } else {
-        // Handle specific error cases
-        if (result.message?.includes('404')) {
-          toast.error('API endpoint not found. The server may be misconfigured. Please contact support.');
-        } else {
-          toast.error(result.message || 'Failed to update profile. Please try again.');
-        }
+        console.error('Profile update failed:', result);
+        
+        // Show more descriptive error message
+        const errorMsg = result?.message || 'Profile update failed. Please check your information and try again.';
+        toast.error(errorMsg);
       }
     } catch (error) {
-      toast.error('An error occurred while updating your profile. Please try again.');
+      console.error('Error submitting form:', error);
+      
+      // Extract the most useful error message
+      let errorMsg = 'Unable to submit your profile. ';
+      
+      if (error.response) {
+        // Server responded with error
+        if (error.response.data && error.response.data.message) {
+          errorMsg += error.response.data.message;
+        } else {
+          errorMsg += `Server error: ${error.response.status}`;
+        }
+      } else if (error.request) {
+        // No response received
+        errorMsg += 'No response from server. Please check your internet connection.';
+      } else {
+        // Other error
+        errorMsg += error.message || 'Unknown error occurred.';
+      }
+      
+      toast.error(errorMsg);
     } finally {
       setIsSubmitting(false);
-    }
-  };
-  
-  // Function to manually fetch profile data
-  const fetchDataManually = async () => {
-    setIsLoadingData(true);
-    setFetchError(null);
-    
-    try {
-      // Skip API calls if no auth token
-      if (!localStorage.getItem('auth-token')) {
-        setFetchError('No authentication token found. Please log in again.');
-        toast.error('Please log in first');
-        setIsLoadingData(false);
-        return;
-      }
-      
-      // Refresh auth data
-      const authResult = await refreshUserData().catch(err => {
-        return { success: false, error: err.message };
-      });
-      
-      // Then fetch profile data
-      const profileResult = await fetchProfile().catch(err => {
-        return { success: false, error: err.message };
-      });
-      
-      const currentUser = authResult.success ? authResult.user : user;
-      const currentProfile = profileResult.success ? profileResult.profile : profile;
-      
-      if (!currentUser && !user) {
-        toast.warning('Could not load user data. You can still continue with manual entry.');
-        setFetchError('Could not load user data. You can still continue with manual entry.');
-      } else {
-        // Use any available data
-        const updatedFormData = {
-          name: (currentUser || user)?.name || '',
-          phone: (currentUser || user)?.phone || (currentProfile || profile)?.phone || '',
-          address: (currentUser || user)?.address?.street || 
-                  (currentProfile || profile)?.address?.street || '',
-          city: (currentUser || user)?.address?.city || 
-               (currentProfile || profile)?.address?.city || '',
-          state: (currentUser || user)?.address?.state || 
-                (currentProfile || profile)?.address?.state || '',
-          zipCode: (currentUser || user)?.address?.zipCode || 
-                  (currentProfile || profile)?.address?.zipCode || '',
-          country: (currentUser || user)?.address?.country || 
-                 (currentProfile || profile)?.address?.country || 'India',
-          dateOfBirth: (currentProfile || profile)?.dateOfBirth || '',
-          
-          // Profile information
-          bio: (currentProfile || profile)?.bio || '',
-          education: (currentProfile || profile)?.education || '',
-          occupation: (currentProfile || profile)?.occupation || '',
-          experience: (currentProfile || profile)?.experience || 'Beginner',
-          emergencyContact: (currentProfile || profile)?.emergencyContact || {
-            name: '',
-            relationship: '',
-            phone: ''
-          },
-          
-          // Skills & Interests
-          skills: (currentProfile || profile)?.skills || [],
-          interests: (currentProfile || profile)?.interests || [],
-          
-          // Availability and preferences
-          availability: (currentProfile || profile)?.availability || {
-            monday: [],
-            tuesday: [],
-            wednesday: [],
-            thursday: [],
-            friday: [],
-            saturday: [],
-            sunday: []
-          },
-          preferredLocations: (currentProfile || profile)?.preferredLocations || [],
-          maxDistance: (currentProfile || profile)?.maxDistance || 15,
-          
-          // Additional information
-          hasDriverLicense: (currentProfile || profile)?.hasDriverLicense || false,
-          hasVehicle: (currentProfile || profile)?.hasVehicle || false,
-          hasCriminalRecord: false,
-          criminalRecordDetails: '',
-          additionalInfo: (currentProfile || profile)?.additionalInfo || ''
-        };
-        
-        setFormData(prev => ({
-          ...prev,
-          ...updatedFormData,
-        }));
-        
-        if (authResult.success || profileResult.success) {
-          toast.success('Profile data loaded successfully!');
-        }
-      }
-    } catch (error) {
-      toast.error('Error loading profile data');
-      setFetchError('Error loading profile data. You can continue with manual entry.');
-    } finally {
-      setIsLoadingData(false);
     }
   };
   
@@ -665,650 +560,633 @@ const VolunteerOnboarding = () => {
         </p>
       </div>
       
-      {isLoadingData ? (
-        <div className="flex flex-col items-center justify-center py-12">
-          <div className="animate-spin text-indigo-600 mb-4">
-            <FiLoader size={40} />
+      {fetchError && (
+        <div className="bg-yellow-50 p-4 border-l-4 border-yellow-500 mb-6">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <FiInfo className="h-5 w-5 text-yellow-500" />
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-yellow-700">
+                {fetchError} <span className="font-medium">You can still proceed with the form.</span>
+                {fetchError.includes('login') && (
+                  <span className="ml-2">
+                    <Link to="/login" className="text-indigo-600 font-medium hover:text-indigo-500">
+                      Login here
+                    </Link>
+                  </span>
+                )}
+              </p>
+            </div>
           </div>
-          <p className="text-gray-600 mb-4">Loading your profile data...</p>
-          <button
-            onClick={fetchDataManually}
-            className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors mb-4"
-          >
-            Retry Loading Data
-          </button>
         </div>
-      ) : (
-        <>
-          {fetchError && (
-            <div className="bg-yellow-50 p-4 border-l-4 border-yellow-500 mb-6">
-              <div className="flex">
-                <div className="flex-shrink-0">
-                  <FiInfo className="h-5 w-5 text-yellow-500" />
+      )}
+      
+      <form onSubmit={handleSubmit} className="bg-white shadow-md rounded-lg p-6 mb-8">
+        {/* Step indicator */}
+        <StepIndicator />
+        
+        <div className="px-6 py-5 border-b border-gray-200">
+          <h2 className="text-xl font-semibold text-gray-800">{getStepContent().title}</h2>
+          <p className="mt-1 text-sm text-gray-600">{getStepContent().subtitle}</p>
+        </div>
+        
+        <div className="p-6">
+          {/* Step 1: Personal Information */}
+          {currentStep === 1 && (
+            <div className="space-y-6">
+              <div>
+                <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+                  Full Name
+                </label>
+                <div className="flex items-center">
+                  <FiUser className="text-gray-400 mr-2" />
+                  <input
+                    type="text"
+                    id="name"
+                    name="name"
+                    value={formData.name}
+                    onChange={(e) => {
+                      handleChange(e);
+                      console.log('Name field changed to:', e.target.value);
+                    }}
+                    placeholder="Enter your full name"
+                    required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                  />
                 </div>
-                <div className="ml-3">
-                  <p className="text-sm text-yellow-700">
-                    {fetchError} <span className="font-medium">You can still proceed with the form.</span>
-                    {fetchError.includes('login') && (
-                      <span className="ml-2">
-                        <Link to="/login" className="text-indigo-600 font-medium hover:text-indigo-500">
-                          Login here
-                        </Link>
-                      </span>
-                    )}
+              </div>
+              
+              <div>
+                <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
+                  Phone Number
+                </label>
+                <div className="flex items-center">
+                  <FiPhone className="text-gray-400 mr-2" />
+                  <input
+                    type="tel"
+                    id="phone"
+                    name="phone"
+                    value={formData.phone}
+                    onChange={handleChange}
+                    required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <label htmlFor="dateOfBirth" className="block text-sm font-medium text-gray-700 mb-1">
+                  Date of Birth
+                </label>
+                <div className="flex items-center">
+                  <FiCalendar className="text-gray-400 mr-2" />
+                  <input
+                    type="date"
+                    id="dateOfBirth"
+                    name="dateOfBirth"
+                    value={formData.dateOfBirth}
+                    onChange={handleChange}
+                    required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-1">
+                  Street Address
+                </label>
+                <div className="flex items-center">
+                  <FiMapPin className="text-gray-400 mr-2" />
+                  <input
+                    type="text"
+                    id="address"
+                    name="address"
+                    value={formData.address}
+                    onChange={handleChange}
+                    required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                  />
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                <div>
+                  <label htmlFor="city" className="block text-sm font-medium text-gray-700 mb-1">
+                    City
+                  </label>
+                  <input
+                    type="text"
+                    id="city"
+                    name="city"
+                    value={formData.city}
+                    onChange={handleChange}
+                    required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                  />
+                </div>
+                
+                <div>
+                  <label htmlFor="state" className="block text-sm font-medium text-gray-700 mb-1">
+                    State
+                  </label>
+                  <input
+                    type="text"
+                    id="state"
+                    name="state"
+                    value={formData.state}
+                    onChange={handleChange}
+                    required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                  />
+                </div>
+                
+                <div>
+                  <label htmlFor="zipCode" className="block text-sm font-medium text-gray-700 mb-1">
+                    ZIP Code
+                  </label>
+                  <input
+                    type="text"
+                    id="zipCode"
+                    name="zipCode"
+                    value={formData.zipCode}
+                    onChange={handleChange}
+                    required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <label htmlFor="country" className="block text-sm font-medium text-gray-700 mb-1">
+                  Country
+                </label>
+                <select
+                  id="country"
+                  name="country"
+                  value={formData.country}
+                  onChange={handleChange}
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                >
+                  <option value="India">India</option>
+                  <option value="United States">United States</option>
+                  <option value="Canada">Canada</option>
+                  <option value="United Kingdom">United Kingdom</option>
+                  <option value="Australia">Australia</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+            </div>
+          )}
+          
+          {/* Step 2: Profile Details */}
+          {currentStep === 2 && (
+            <div className="space-y-6">
+              <div>
+                <label htmlFor="bio" className="block text-sm font-medium text-gray-700 mb-1">
+                  Bio (Tell us about yourself)
+                </label>
+                <textarea
+                  id="bio"
+                  name="bio"
+                  rows="4"
+                  value={formData.bio}
+                  onChange={handleChange}
+                  placeholder="Share a bit about yourself, your motivations for volunteering, and any relevant experience..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                ></textarea>
+                <p className="mt-1 text-sm text-gray-500">
+                  This helps organizations get to know you better.
+                </p>
+              </div>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div>
+                  <label htmlFor="education" className="block text-sm font-medium text-gray-700 mb-1">
+                    Education (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    id="education"
+                    name="education"
+                    value={formData.education}
+                    onChange={handleChange}
+                    placeholder="Highest level of education or degree"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                  />
+                </div>
+                
+                <div>
+                  <label htmlFor="experience" className="block text-sm font-medium text-gray-700 mb-1">
+                    Volunteering Experience Level
+                  </label>
+                  <select
+                    id="experience"
+                    name="experience"
+                    value={formData.experience}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                  >
+                    <option value="Beginner">Beginner - Little to no prior volunteering experience</option>
+                    <option value="Intermediate">Intermediate - Some volunteering experience</option>
+                    <option value="Expert">Expert - Extensive volunteering experience</option>
+                  </select>
+                  <p className="mt-1 text-sm text-gray-500">
+                    This helps match you with appropriate opportunities.
                   </p>
+                </div>
+                
+                <div>
+                  <label htmlFor="occupation" className="block text-sm font-medium text-gray-700 mb-1">
+                    Occupation (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    id="occupation"
+                    name="occupation"
+                    value={formData.occupation}
+                    onChange={handleChange}
+                    placeholder="Current job or profession"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                  />
+                </div>
+              </div>
+              
+              <div className="bg-blue-50 rounded-md p-4 border border-blue-100">
+                <h3 className="text-md font-medium text-blue-800 mb-2 flex items-center">
+                  <FiInfo className="mr-2" />
+                  Emergency Contact Information
+                </h3>
+                <p className="text-sm text-blue-700 mb-3">
+                  This information will only be used in case of emergency.
+                </p>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="emergencyContact.name" className="block text-sm font-medium text-gray-700 mb-1">
+                      Emergency Contact Name
+                    </label>
+                    <input
+                      type="text"
+                      id="emergencyContact.name"
+                      name="emergencyContact.name"
+                      value={formData.emergencyContact.name}
+                      onChange={handleChange}
+                      required
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label htmlFor="emergencyContact.relationship" className="block text-sm font-medium text-gray-700 mb-1">
+                      Relationship
+                    </label>
+                    <input
+                      type="text"
+                      id="emergencyContact.relationship"
+                      name="emergencyContact.relationship"
+                      value={formData.emergencyContact.relationship}
+                      onChange={handleChange}
+                      required
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                    />
+                  </div>
+                  
+                  <div className="sm:col-span-2">
+                    <label htmlFor="emergencyContact.phone" className="block text-sm font-medium text-gray-700 mb-1">
+                      Emergency Contact Phone
+                    </label>
+                    <input
+                      type="tel"
+                      id="emergencyContact.phone"
+                      name="emergencyContact.phone"
+                      value={formData.emergencyContact.phone}
+                      onChange={handleChange}
+                      required
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
           )}
           
-          <form onSubmit={handleSubmit} className="bg-white shadow-md rounded-lg p-6 mb-8">
-            {/* Step indicator */}
-            <StepIndicator />
-            
-            <div className="px-6 py-5 border-b border-gray-200">
-              <h2 className="text-xl font-semibold text-gray-800">{getStepContent().title}</h2>
-              <p className="mt-1 text-sm text-gray-600">{getStepContent().subtitle}</p>
-            </div>
-            
-            <div className="p-6">
-              {/* Step 1: Personal Information */}
-              {currentStep === 1 && (
-                <div className="space-y-6">
-                  <div>
-                    <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-                      Full Name
-                    </label>
-                    <div className="flex items-center">
-                      <FiUser className="text-gray-400 mr-2" />
-                      <input
-                        type="text"
-                        id="name"
-                        name="name"
-                        value={formData.name}
-                        onChange={(e) => {
-                          handleChange(e);
-                          console.log('Name field changed to:', e.target.value);
-                        }}
-                        placeholder="Enter your full name"
-                        required
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
-                      />
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
-                      Phone Number
-                    </label>
-                    <div className="flex items-center">
-                      <FiPhone className="text-gray-400 mr-2" />
-                      <input
-                        type="tel"
-                        id="phone"
-                        name="phone"
-                        value={formData.phone}
-                        onChange={handleChange}
-                        required
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
-                      />
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <label htmlFor="dateOfBirth" className="block text-sm font-medium text-gray-700 mb-1">
-                      Date of Birth
-                    </label>
-                    <div className="flex items-center">
-                      <FiCalendar className="text-gray-400 mr-2" />
-                      <input
-                        type="date"
-                        id="dateOfBirth"
-                        name="dateOfBirth"
-                        value={formData.dateOfBirth}
-                        onChange={handleChange}
-                        required
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
-                      />
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-1">
-                      Street Address
-                    </label>
-                    <div className="flex items-center">
-                      <FiMapPin className="text-gray-400 mr-2" />
-                      <input
-                        type="text"
-                        id="address"
-                        name="address"
-                        value={formData.address}
-                        onChange={handleChange}
-                        required
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                    <div>
-                      <label htmlFor="city" className="block text-sm font-medium text-gray-700 mb-1">
-                        City
-                      </label>
-                      <input
-                        type="text"
-                        id="city"
-                        name="city"
-                        value={formData.city}
-                        onChange={handleChange}
-                        required
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label htmlFor="state" className="block text-sm font-medium text-gray-700 mb-1">
-                        State
-                      </label>
-                      <input
-                        type="text"
-                        id="state"
-                        name="state"
-                        value={formData.state}
-                        onChange={handleChange}
-                        required
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label htmlFor="zipCode" className="block text-sm font-medium text-gray-700 mb-1">
-                        ZIP Code
-                      </label>
-                      <input
-                        type="text"
-                        id="zipCode"
-                        name="zipCode"
-                        value={formData.zipCode}
-                        onChange={handleChange}
-                        required
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
-                      />
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <label htmlFor="country" className="block text-sm font-medium text-gray-700 mb-1">
-                      Country
-                    </label>
-                    <select
-                      id="country"
-                      name="country"
-                      value={formData.country}
-                      onChange={handleChange}
-                      required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+          {/* Step 3: Skills & Interests */}
+          {currentStep === 3 && (
+            <div className="space-y-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                  <FiInfo className="mr-1" />
+                  Skills & Abilities
+                </label>
+                <p className="text-sm text-gray-500 mb-3">
+                  Select all the skills you have that might be useful for volunteering.
+                </p>
+                
+                <div className="flex flex-wrap gap-2">
+                  {skillOptions.map(skill => (
+                    <button
+                      key={skill}
+                      type="button"
+                      onClick={() => handleSkillToggle(skill)}
+                      className={`px-3 py-1.5 text-sm rounded-full transition-colors ${
+                        formData.skills.includes(skill)
+                          ? 'bg-indigo-100 text-indigo-800 border border-indigo-300'
+                          : 'bg-gray-100 text-gray-700 border border-gray-200 hover:bg-gray-200'
+                      }`}
                     >
-                      <option value="India">India</option>
-                      <option value="United States">United States</option>
-                      <option value="Canada">Canada</option>
-                      <option value="United Kingdom">United Kingdom</option>
-                      <option value="Australia">Australia</option>
-                      <option value="Other">Other</option>
-                    </select>
+                      {skill}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Causes & Interests
+                </label>
+                <p className="text-sm text-gray-500 mb-3">
+                  Select the causes you're most passionate about. This helps us match you with relevant opportunities.
+                </p>
+                
+                <div className="flex flex-wrap gap-2">
+                  {interestCategories.map(interest => (
+                    <button
+                      key={interest}
+                      type="button"
+                      onClick={() => handleInterestToggle(interest)}
+                      className={`px-3 py-1.5 text-sm rounded-full transition-colors ${
+                        formData.interests.includes(interest)
+                          ? 'bg-green-100 text-green-800 border border-green-300'
+                          : 'bg-gray-100 text-gray-700 border border-gray-200 hover:bg-gray-200'
+                      }`}
+                    >
+                      {interest}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {/* Step 4: Availability & Preferences */}
+          {currentStep === 4 && (
+            <div className="space-y-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                  <FiClock className="mr-1" />
+                  Availability
+                </label>
+                <p className="text-sm text-gray-500 mb-3">
+                  Select the times you're typically available to volunteer. This helps organizations find suitable shifts for you.
+                </p>
+                
+                <div className="overflow-x-auto">
+                  <table className="min-w-full border border-gray-200 rounded-md">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b">
+                          Day
+                        </th>
+                        {timeSlots.map(slot => (
+                          <th key={slot} className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b">
+                            {slot}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {Object.keys(formData.availability).map(day => (
+                        <tr key={day} className="hover:bg-gray-50">
+                          <td className="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-700 border-r">
+                            {day.charAt(0).toUpperCase() + day.slice(1)}
+                          </td>
+                          {timeSlots.map(slot => (
+                            <td key={`${day}-${slot}`} className="px-4 py-2 whitespace-nowrap text-sm text-gray-500 border-r">
+                              <button
+                                type="button"
+                                onClick={() => handleAvailabilityToggle(day, slot)}
+                                className={`w-6 h-6 rounded-full ${
+                                  formData.availability[day].includes(slot)
+                                    ? 'bg-indigo-500 text-white'
+                                    : 'bg-gray-200 text-gray-500'
+                                } flex items-center justify-center focus:outline-none`}
+                              >
+                                {formData.availability[day].includes(slot) ? '✓' : ''}
+                              </button>
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                  <FiMapPin className="mr-1" />
+                  Preferred Locations
+                </label>
+                <p className="text-sm text-gray-500 mb-3">
+                  Select the areas where you prefer to volunteer.
+                </p>
+                
+                <div className="flex flex-wrap gap-2">
+                  {commonLocations.map(location => (
+                    <button
+                      key={location}
+                      type="button"
+                      onClick={() => handleLocationToggle(location)}
+                      className={`px-3 py-1.5 text-sm rounded-full transition-colors ${
+                        formData.preferredLocations.includes(location)
+                          ? 'bg-blue-100 text-blue-800 border border-blue-300'
+                          : 'bg-gray-100 text-gray-700 border border-gray-200 hover:bg-gray-200'
+                      }`}
+                    >
+                      {location}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              
+              <div>
+                <label htmlFor="maxDistance" className="block text-sm font-medium text-gray-700 mb-1">
+                  Maximum Distance Willing to Travel (miles)
+                </label>
+                <input
+                  type="range"
+                  id="maxDistance"
+                  name="maxDistance"
+                  min="5"
+                  max="50"
+                  step="5"
+                  value={formData.maxDistance}
+                  onChange={handleChange}
+                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                />
+                <div className="flex justify-between text-xs text-gray-500 px-2">
+                  <span>5 miles</span>
+                  <span>{formData.maxDistance} miles</span>
+                  <span>50 miles</span>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {/* Step 5: Additional Information */}
+          {currentStep === 5 && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div className="flex items-start">
+                  <div className="flex items-center h-5">
+                    <input
+                      id="hasDriverLicense"
+                      name="hasDriverLicense"
+                      type="checkbox"
+                      checked={formData.hasDriverLicense}
+                      onChange={handleCheckboxChange}
+                      className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                    />
+                  </div>
+                  <div className="ml-3 text-sm">
+                    <label htmlFor="hasDriverLicense" className="font-medium text-gray-700">
+                      I have a valid driver's license
+                    </label>
                   </div>
                 </div>
-              )}
-              
-              {/* Step 2: Profile Details */}
-              {currentStep === 2 && (
-                <div className="space-y-6">
-                  <div>
-                    <label htmlFor="bio" className="block text-sm font-medium text-gray-700 mb-1">
-                      Bio (Tell us about yourself)
-                    </label>
-                    <textarea
-                      id="bio"
-                      name="bio"
-                      rows="4"
-                      value={formData.bio}
-                      onChange={handleChange}
-                      placeholder="Share a bit about yourself, your motivations for volunteering, and any relevant experience..."
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
-                    ></textarea>
-                    <p className="mt-1 text-sm text-gray-500">
-                      This helps organizations get to know you better.
-                    </p>
+                
+                <div className="flex items-start">
+                  <div className="flex items-center h-5">
+                    <input
+                      id="hasVehicle"
+                      name="hasVehicle"
+                      type="checkbox"
+                      checked={formData.hasVehicle}
+                      onChange={handleCheckboxChange}
+                      className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                    />
                   </div>
-                  
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                    <div>
-                      <label htmlFor="education" className="block text-sm font-medium text-gray-700 mb-1">
-                        Education (Optional)
-                      </label>
+                  <div className="ml-3 text-sm">
+                    <label htmlFor="hasVehicle" className="font-medium text-gray-700">
+                      I have access to a vehicle
+                    </label>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="bg-yellow-50 rounded-md p-4 border border-yellow-100">
+                <h3 className="text-md font-medium text-yellow-800 mb-2 flex items-center">
+                  <FiInfo className="mr-2" />
+                  Background Information
+                </h3>
+                <p className="text-sm text-yellow-700 mb-3">
+                  Some volunteer opportunities may require background checks, particularly when working with vulnerable populations.
+                </p>
+                
+                <div className="space-y-4">
+                  <div className="flex items-start">
+                    <div className="flex items-center h-5">
                       <input
-                        type="text"
-                        id="education"
-                        name="education"
-                        value={formData.education}
-                        onChange={handleChange}
-                        placeholder="Highest level of education or degree"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                        id="hasCriminalRecord"
+                        name="hasCriminalRecord"
+                        type="checkbox"
+                        checked={formData.hasCriminalRecord}
+                        onChange={handleCheckboxChange}
+                        className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
                       />
                     </div>
-                    
-                    <div>
-                      <label htmlFor="experience" className="block text-sm font-medium text-gray-700 mb-1">
-                        Volunteering Experience Level
+                    <div className="ml-3 text-sm">
+                      <label htmlFor="hasCriminalRecord" className="font-medium text-gray-700">
+                        I have a criminal record
                       </label>
-                      <select
-                        id="experience"
-                        name="experience"
-                        value={formData.experience}
-                        onChange={handleChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
-                      >
-                        <option value="Beginner">Beginner - Little to no prior volunteering experience</option>
-                        <option value="Intermediate">Intermediate - Some volunteering experience</option>
-                        <option value="Expert">Expert - Extensive volunteering experience</option>
-                      </select>
-                      <p className="mt-1 text-sm text-gray-500">
-                        This helps match you with appropriate opportunities.
+                      <p className="text-gray-500">
+                        Having a criminal record doesn't automatically disqualify you from volunteering.
                       </p>
                     </div>
-                    
+                  </div>
+                  
+                  {formData.hasCriminalRecord && (
                     <div>
-                      <label htmlFor="occupation" className="block text-sm font-medium text-gray-700 mb-1">
-                        Occupation (Optional)
+                      <label htmlFor="criminalRecordDetails" className="block text-sm font-medium text-gray-700 mb-1">
+                        Please provide details
                       </label>
-                      <input
-                        type="text"
-                        id="occupation"
-                        name="occupation"
-                        value={formData.occupation}
+                      <textarea
+                        id="criminalRecordDetails"
+                        name="criminalRecordDetails"
+                        rows="3"
+                        value={formData.criminalRecordDetails}
                         onChange={handleChange}
-                        placeholder="Current job or profession"
                         className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
-                      />
+                      ></textarea>
                     </div>
-                  </div>
-                  
-                  <div className="bg-blue-50 rounded-md p-4 border border-blue-100">
-                    <h3 className="text-md font-medium text-blue-800 mb-2 flex items-center">
-                      <FiInfo className="mr-2" />
-                      Emergency Contact Information
-                    </h3>
-                    <p className="text-sm text-blue-700 mb-3">
-                      This information will only be used in case of emergency.
-                    </p>
-                    
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <label htmlFor="emergencyContact.name" className="block text-sm font-medium text-gray-700 mb-1">
-                          Emergency Contact Name
-                        </label>
-                        <input
-                          type="text"
-                          id="emergencyContact.name"
-                          name="emergencyContact.name"
-                          value={formData.emergencyContact.name}
-                          onChange={handleChange}
-                          required
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
-                        />
-                      </div>
-                      
-                      <div>
-                        <label htmlFor="emergencyContact.relationship" className="block text-sm font-medium text-gray-700 mb-1">
-                          Relationship
-                        </label>
-                        <input
-                          type="text"
-                          id="emergencyContact.relationship"
-                          name="emergencyContact.relationship"
-                          value={formData.emergencyContact.relationship}
-                          onChange={handleChange}
-                          required
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
-                        />
-                      </div>
-                      
-                      <div className="sm:col-span-2">
-                        <label htmlFor="emergencyContact.phone" className="block text-sm font-medium text-gray-700 mb-1">
-                          Emergency Contact Phone
-                        </label>
-                        <input
-                          type="tel"
-                          id="emergencyContact.phone"
-                          name="emergencyContact.phone"
-                          value={formData.emergencyContact.phone}
-                          onChange={handleChange}
-                          required
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-              
-              {/* Step 3: Skills & Interests */}
-              {currentStep === 3 && (
-                <div className="space-y-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
-                      <FiInfo className="mr-1" />
-                      Skills & Abilities
-                    </label>
-                    <p className="text-sm text-gray-500 mb-3">
-                      Select all the skills you have that might be useful for volunteering.
-                    </p>
-                    
-                    <div className="flex flex-wrap gap-2">
-                      {skillOptions.map(skill => (
-                        <button
-                          key={skill}
-                          type="button"
-                          onClick={() => handleSkillToggle(skill)}
-                          className={`px-3 py-1.5 text-sm rounded-full transition-colors ${
-                            formData.skills.includes(skill)
-                              ? 'bg-indigo-100 text-indigo-800 border border-indigo-300'
-                              : 'bg-gray-100 text-gray-700 border border-gray-200 hover:bg-gray-200'
-                          }`}
-                        >
-                          {skill}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Causes & Interests
-                    </label>
-                    <p className="text-sm text-gray-500 mb-3">
-                      Select the causes you're most passionate about. This helps us match you with relevant opportunities.
-                    </p>
-                    
-                    <div className="flex flex-wrap gap-2">
-                      {interestCategories.map(interest => (
-                        <button
-                          key={interest}
-                          type="button"
-                          onClick={() => handleInterestToggle(interest)}
-                          className={`px-3 py-1.5 text-sm rounded-full transition-colors ${
-                            formData.interests.includes(interest)
-                              ? 'bg-green-100 text-green-800 border border-green-300'
-                              : 'bg-gray-100 text-gray-700 border border-gray-200 hover:bg-gray-200'
-                          }`}
-                        >
-                          {interest}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
-              
-              {/* Step 4: Availability & Preferences */}
-              {currentStep === 4 && (
-                <div className="space-y-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
-                      <FiClock className="mr-1" />
-                      Availability
-                    </label>
-                    <p className="text-sm text-gray-500 mb-3">
-                      Select the times you're typically available to volunteer. This helps organizations find suitable shifts for you.
-                    </p>
-                    
-                    <div className="overflow-x-auto">
-                      <table className="min-w-full border border-gray-200 rounded-md">
-                        <thead className="bg-gray-50">
-                          <tr>
-                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b">
-                              Day
-                            </th>
-                            {timeSlots.map(slot => (
-                              <th key={slot} className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b">
-                                {slot}
-                              </th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                          {Object.keys(formData.availability).map(day => (
-                            <tr key={day} className="hover:bg-gray-50">
-                              <td className="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-700 border-r">
-                                {day.charAt(0).toUpperCase() + day.slice(1)}
-                              </td>
-                              {timeSlots.map(slot => (
-                                <td key={`${day}-${slot}`} className="px-4 py-2 whitespace-nowrap text-sm text-gray-500 border-r">
-                                  <button
-                                    type="button"
-                                    onClick={() => handleAvailabilityToggle(day, slot)}
-                                    className={`w-6 h-6 rounded-full ${
-                                      formData.availability[day].includes(slot)
-                                        ? 'bg-indigo-500 text-white'
-                                        : 'bg-gray-200 text-gray-500'
-                                    } flex items-center justify-center focus:outline-none`}
-                                  >
-                                    {formData.availability[day].includes(slot) ? '✓' : ''}
-                                  </button>
-                                </td>
-                              ))}
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
-                      <FiMapPin className="mr-1" />
-                      Preferred Locations
-                    </label>
-                    <p className="text-sm text-gray-500 mb-3">
-                      Select the areas where you prefer to volunteer.
-                    </p>
-                    
-                    <div className="flex flex-wrap gap-2">
-                      {commonLocations.map(location => (
-                        <button
-                          key={location}
-                          type="button"
-                          onClick={() => handleLocationToggle(location)}
-                          className={`px-3 py-1.5 text-sm rounded-full transition-colors ${
-                            formData.preferredLocations.includes(location)
-                              ? 'bg-blue-100 text-blue-800 border border-blue-300'
-                              : 'bg-gray-100 text-gray-700 border border-gray-200 hover:bg-gray-200'
-                          }`}
-                        >
-                          {location}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <label htmlFor="maxDistance" className="block text-sm font-medium text-gray-700 mb-1">
-                      Maximum Distance Willing to Travel (miles)
-                    </label>
-                    <input
-                      type="range"
-                      id="maxDistance"
-                      name="maxDistance"
-                      min="5"
-                      max="50"
-                      step="5"
-                      value={formData.maxDistance}
-                      onChange={handleChange}
-                      className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                    />
-                    <div className="flex justify-between text-xs text-gray-500 px-2">
-                      <span>5 miles</span>
-                      <span>{formData.maxDistance} miles</span>
-                      <span>50 miles</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-              
-              {/* Step 5: Additional Information */}
-              {currentStep === 5 && (
-                <div className="space-y-6">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                    <div className="flex items-start">
-                      <div className="flex items-center h-5">
-                        <input
-                          id="hasDriverLicense"
-                          name="hasDriverLicense"
-                          type="checkbox"
-                          checked={formData.hasDriverLicense}
-                          onChange={handleCheckboxChange}
-                          className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
-                        />
-                      </div>
-                      <div className="ml-3 text-sm">
-                        <label htmlFor="hasDriverLicense" className="font-medium text-gray-700">
-                          I have a valid driver's license
-                        </label>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-start">
-                      <div className="flex items-center h-5">
-                        <input
-                          id="hasVehicle"
-                          name="hasVehicle"
-                          type="checkbox"
-                          checked={formData.hasVehicle}
-                          onChange={handleCheckboxChange}
-                          className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
-                        />
-                      </div>
-                      <div className="ml-3 text-sm">
-                        <label htmlFor="hasVehicle" className="font-medium text-gray-700">
-                          I have access to a vehicle
-                        </label>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-yellow-50 rounded-md p-4 border border-yellow-100">
-                    <h3 className="text-md font-medium text-yellow-800 mb-2 flex items-center">
-                      <FiInfo className="mr-2" />
-                      Background Information
-                    </h3>
-                    <p className="text-sm text-yellow-700 mb-3">
-                      Some volunteer opportunities may require background checks, particularly when working with vulnerable populations.
-                    </p>
-                    
-                    <div className="space-y-4">
-                      <div className="flex items-start">
-                        <div className="flex items-center h-5">
-                          <input
-                            id="hasCriminalRecord"
-                            name="hasCriminalRecord"
-                            type="checkbox"
-                            checked={formData.hasCriminalRecord}
-                            onChange={handleCheckboxChange}
-                            className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
-                          />
-                        </div>
-                        <div className="ml-3 text-sm">
-                          <label htmlFor="hasCriminalRecord" className="font-medium text-gray-700">
-                            I have a criminal record
-                          </label>
-                          <p className="text-gray-500">
-                            Having a criminal record doesn't automatically disqualify you from volunteering.
-                          </p>
-                        </div>
-                      </div>
-                      
-                      {formData.hasCriminalRecord && (
-                        <div>
-                          <label htmlFor="criminalRecordDetails" className="block text-sm font-medium text-gray-700 mb-1">
-                            Please provide details
-                          </label>
-                          <textarea
-                            id="criminalRecordDetails"
-                            name="criminalRecordDetails"
-                            rows="3"
-                            value={formData.criminalRecordDetails}
-                            onChange={handleChange}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
-                          ></textarea>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <label htmlFor="additionalInfo" className="block text-sm font-medium text-gray-700 mb-1">
-                      Additional Information (Optional)
-                    </label>
-                    <textarea
-                      id="additionalInfo"
-                      name="additionalInfo"
-                      rows="3"
-                      value={formData.additionalInfo}
-                      onChange={handleChange}
-                      placeholder="Any other details you'd like to share..."
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
-                    ></textarea>
-                  </div>
-                </div>
-              )}
-            </div>
-            
-            <div className="px-6 py-4 bg-gray-50 flex justify-between items-center">
-              <button
-                type="button"
-                onClick={handlePreviousStep}
-                disabled={currentStep === 1}
-                className={`flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 ${
-                  currentStep === 1 ? 'opacity-50 cursor-not-allowed' : ''
-                }`}
-              >
-                <FiArrowLeft className="mr-2" /> Previous
-              </button>
-              
-              {currentStep < totalSteps ? (
-                <button
-                  type="button"
-                  onClick={handleNextStep}
-                  className="flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                >
-                  Next <FiArrowRight className="ml-2" />
-                </button>
-              ) : (
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      Submitting...
-                    </>
-                  ) : (
-                    <>
-                      <FiSave className="mr-2" /> Complete Profile
-                    </>
                   )}
-                </button>
-              )}
+                </div>
+              </div>
+              
+              <div>
+                <label htmlFor="additionalInfo" className="block text-sm font-medium text-gray-700 mb-1">
+                  Additional Information (Optional)
+                </label>
+                <textarea
+                  id="additionalInfo"
+                  name="additionalInfo"
+                  rows="3"
+                  value={formData.additionalInfo}
+                  onChange={handleChange}
+                  placeholder="Any other details you'd like to share..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                ></textarea>
+              </div>
             </div>
-          </form>
-        </>
-      )}
+          )}
+        </div>
+        
+        <div className="px-6 py-4 bg-gray-50 flex justify-between items-center">
+          <button
+            type="button"
+            onClick={handlePreviousStep}
+            disabled={currentStep === 1}
+            className={`flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 ${
+              currentStep === 1 ? 'opacity-50 cursor-not-allowed' : ''
+            }`}
+          >
+            <FiArrowLeft className="mr-2" /> Previous
+          </button>
+          
+          {currentStep < totalSteps ? (
+            <button
+              type="button"
+              onClick={handleNextStep}
+              className="flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            >
+              Next <FiArrowRight className="ml-2" />
+            </button>
+          ) : (
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+            >
+              {isSubmitting ? (
+                <>
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Submitting...
+                </>
+              ) : (
+                <>
+                  <FiSave className="mr-2" /> Complete Profile
+                </>
+              )}
+            </button>
+          )}
+        </div>
+      </form>
     </div>
   );
 };

@@ -68,7 +68,8 @@ const Register = () => {
   // Handle role selection with special logic for NGO
   const handleRoleSelect = (role) => {
     if (role === "ngo") {
-      // When selecting NGO, use the name as organization name
+      // When selecting NGO, use the name as organization name but don't set it directly on formData
+      // The backend will handle placing it in the ngoInfo object
       setFormData({ ...formData, role, organization: formData.name });
     } else {
       // For volunteer, clear organization field
@@ -152,6 +153,7 @@ const Register = () => {
         confirmPassword: "[REDACTED]",
       });
 
+      // We pass the organization field directly - the backend will structure it properly
       // Submit with consolidated data
       const response = await register(formData);
 
