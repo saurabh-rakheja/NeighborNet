@@ -33,7 +33,7 @@ const eventSchema = new mongoose.Schema(
         type: String,
         required: [true, "Zip code is required"],
         trim: true,
-      }
+      },
     },
     startDate: {
       type: Date,
@@ -43,14 +43,12 @@ const eventSchema = new mongoose.Schema(
       type: Date,
       required: [true, "Event end date is required"],
     },
-    shifts: [{
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Shift"
-    }],
-    skillsRequired: [{
-      type: String,
-      trim: true,
-    }],
+    skillsRequired: [
+      {
+        type: String,
+        trim: true,
+      },
+    ],
     organizerId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
@@ -65,6 +63,23 @@ const eventSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    registeredVolunteers: [
+      {
+        volunteer: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+        },
+        status: {
+          type: String,
+          enum: ["pending", "approved", "rejected"],
+          default: "pending",
+        },
+        registeredAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
     status: {
       type: String,
       enum: ["Upcoming", "Ongoing", "Completed", "Cancelled"],
@@ -73,7 +88,6 @@ const eventSchema = new mongoose.Schema(
     category: {
       type: String,
       required: [true, "Event category is required"],
-      enum: ["Community Service", "Environmental", "Education", "Healthcare", "Animal Welfare", "Food Donation", "Other"],
     },
     image: {
       type: String,
@@ -82,8 +96,12 @@ const eventSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    requiresApproval: {
+      type: Boolean,
+      default: false,
+    },
   },
   { timestamps: true }
 );
 
-module.exports = mongoose.model("Event", eventSchema); 
+module.exports = mongoose.model("Event", eventSchema);

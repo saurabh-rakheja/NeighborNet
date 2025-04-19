@@ -17,8 +17,8 @@ const { sanitizeInput, sanitizeMongo } = require("./security/inputSanitizer");
 const authRoutes = require("./routes/authRoutes");
 const userRoutes = require("./routes/userRoutes");
 const eventRoutes = require("./routes/eventRoutes");
-const shiftRoutes = require("./routes/shiftRoutes");
 const participationRoutes = require("./routes/participationRoutes");
+const ngoRoutes = require("./routes/ngoRoutes");
 
 // Load environment variables
 dotenv.config();
@@ -31,33 +31,44 @@ connectDB()
   .catch((err) => console.error("MongoDB connection error:", err));
 
 // Configure CORS
-const allowedOrigins = process.env.ALLOWED_ORIGINS 
-  ? process.env.ALLOWED_ORIGINS.split(',') 
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(",")
   : ["http://localhost:3000", "http://localhost:5173", "http://localhost:5174"];
 
-app.use(cors({
-  origin: function(origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-    
-    if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV !== "production") {
-      callback(null, true);
-    } else {
-      console.warn(`Origin ${origin} not allowed by CORS. Allowed origins: ${allowedOrigins.join(', ')}`);
-      callback(new Error("Not allowed by CORS"));
-    }
-  },
-  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-  credentials: true,
-  allowedHeaders: ["Content-Type", "Authorization"]
-}));
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin) return callback(null, true);
+
+      if (
+        allowedOrigins.indexOf(origin) !== -1 ||
+        process.env.NODE_ENV !== "production"
+      ) {
+        callback(null, true);
+      } else {
+        console.warn(
+          `Origin ${origin} not allowed by CORS. Allowed origins: ${allowedOrigins.join(
+            ", "
+          )}`
+        );
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    credentials: true,
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
 
 // Middleware
 app.use(express.json());
 app.use(cookieParser());
-app.use(helmet({
-  crossOriginResourcePolicy: { policy: "cross-origin" }
-}));
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+  })
+);
 app.use(xss());
 app.use(morgan("dev"));
 
@@ -84,7 +95,7 @@ app.use(
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // limit each IP to 100 requests per windowMs
-  message: "Too many requests from this IP, please try again later"
+  message: "Too many requests from this IP, please try again later",
 });
 app.use("/api/", limiter);
 
@@ -99,9 +110,8 @@ app.get("/api/health", (req, res) => {
       auth: "/api/auth",
       users: "/api/users",
       events: "/api/events",
-      shifts: "/api/shifts",
-      participations: "/api/participations"
-    }
+      participations: "/api/participations",
+    },
   });
 });
 
@@ -109,14 +119,14 @@ app.get("/api/health", (req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/events", eventRoutes);
-app.use("/api/shifts", shiftRoutes);
 app.use("/api/participations", participationRoutes);
+app.use("/api/ngos", ngoRoutes);
 
 // 404 Route
 app.use("*", (req, res) => {
   res.status(404).json({
     success: false,
-    message: "Resource not found"
+    message: "Resource not found",
   });
 });
 
@@ -125,7 +135,7 @@ app.use((err, req, res, next) => {
   console.error("Error:", err);
   res.status(err.statusCode || 500).json({
     success: false,
-    message: err.message || "Internal Server Error"
+    message: err.message || "Internal Server Error",
   });
 });
 

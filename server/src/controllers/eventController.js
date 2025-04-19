@@ -1,11 +1,11 @@
 const Event = require("../models/eventSchema");
-const Shift = require("../models/shiftSchema");
+const User = require("../models/userSchema");
 
 // Create a new event
 exports.createEvent = async (req, res) => {
   try {
     // Check if user is NGO or admin
-    if (req.user.role !== 'ngo' && req.user.role !== 'admin') {
+    if (req.user.role !== "ngo" && req.user.role !== "admin") {
       return res.status(403).json({
         success: false,
         message: "Only NGOs can create events",
@@ -16,9 +16,9 @@ exports.createEvent = async (req, res) => {
       ...req.body,
       organizerId: req.user.id,
     };
-    
+
     const event = await Event.create(eventData);
-    
+
     res.status(201).json({
       success: true,
       data: event,
@@ -35,44 +35,38 @@ exports.createEvent = async (req, res) => {
 // Get all events with filtering
 exports.getAllEvents = async (req, res) => {
   try {
-    const { 
-      status, 
-      category, 
-      startDate, 
-      endDate, 
-      location,
-      search
-    } = req.query;
-    
+    const { status, category, startDate, endDate, location, search } =
+      req.query;
+
     // Build query
     const query = { active: true };
-    
+
     if (status) query.status = status;
     if (category) query.category = category;
     if (location) query["location.city"] = { $regex: location, $options: "i" };
-    
+
     if (startDate) {
       query.startDate = { $gte: new Date(startDate) };
     }
-    
+
     if (endDate) {
       query.endDate = { $lte: new Date(endDate) };
     }
-    
+
     if (search) {
       query.$or = [
         { title: { $regex: search, $options: "i" } },
         { description: { $regex: search, $options: "i" } },
       ];
     }
-    
+
     const events = await Event.find(query)
       .populate({
         path: "organizerId",
         select: "name email organization",
       })
       .sort({ startDate: 1 });
-    
+
     res.status(200).json({
       success: true,
       count: events.length,
@@ -90,20 +84,18 @@ exports.getAllEvents = async (req, res) => {
 // Get single event by ID
 exports.getEventById = async (req, res) => {
   try {
-    const event = await Event.findById(req.params.id)
-      .populate({
+    const event = await Event.findById(req.params.id).populate({
         path: "organizerId",
         select: "name email organization",
-      })
-      .populate("shifts");
-    
+    });
+
     if (!event) {
       return res.status(404).json({
         success: false,
         message: "Event not found",
       });
     }
-    
+
     res.status(200).json({
       success: true,
       data: event,
@@ -121,17 +113,18 @@ exports.getEventById = async (req, res) => {
 exports.updateEvent = async (req, res) => {
   try {
     const event = await Event.findById(req.params.id);
-    
+
     if (!event) {
       return res.status(404).json({
         success: false,
         message: "Event not found",
       });
     }
-    
+
     // Check if user is NGO and is the organizer or is admin
     if (
-      (req.user.role === 'ngo' && event.organizerId.toString() !== req.user.id) &&
+      req.user.role === "ngo" &&
+      event.organizerId.toString() !== req.user.id &&
       req.user.role !== "admin"
     ) {
       return res.status(403).json({
@@ -139,13 +132,13 @@ exports.updateEvent = async (req, res) => {
         message: "You are not authorized to update this event",
       });
     }
-    
+
     const updatedEvent = await Event.findByIdAndUpdate(
       req.params.id,
       req.body,
       { new: true, runValidators: true }
     );
-    
+
     res.status(200).json({
       success: true,
       data: updatedEvent,
@@ -163,17 +156,18 @@ exports.updateEvent = async (req, res) => {
 exports.deleteEvent = async (req, res) => {
   try {
     const event = await Event.findById(req.params.id);
-    
+
     if (!event) {
       return res.status(404).json({
         success: false,
         message: "Event not found",
       });
     }
-    
+
     // Check if user is NGO and is the organizer or is admin
     if (
-      (req.user.role === 'ngo' && event.organizerId.toString() !== req.user.id) &&
+      req.user.role === "ngo" &&
+      event.organizerId.toString() !== req.user.id &&
       req.user.role !== "admin"
     ) {
       return res.status(403).json({
@@ -181,11 +175,11 @@ exports.deleteEvent = async (req, res) => {
         message: "You are not authorized to delete this event",
       });
     }
-    
+
     // Set active to false (soft delete)
     event.active = false;
     await event.save();
-    
+
     res.status(200).json({
       success: true,
       message: "Event deleted successfully",
@@ -203,18 +197,18 @@ exports.deleteEvent = async (req, res) => {
 exports.getMyEvents = async (req, res) => {
   try {
     // Check if user is NGO or admin
-    if (req.user.role !== 'ngo' && req.user.role !== 'admin') {
+    if (req.user.role !== "ngo" && req.user.role !== "admin") {
       return res.status(403).json({
         success: false,
         message: "Only NGOs can access this endpoint",
       });
     }
 
-    const events = await Event.find({ 
+    const events = await Event.find({
       organizerId: req.user.id,
-      active: true 
+      active: true,
     }).sort({ startDate: 1 });
-    
+
     res.status(200).json({
       success: true,
       count: events.length,
@@ -233,7 +227,7 @@ exports.getMyEvents = async (req, res) => {
 exports.getNGODashboardEvents = async (req, res) => {
   try {
     // Check if user is NGO or admin
-    if (req.user.role !== 'ngo' && req.user.role !== 'admin') {
+    if (req.user.role !== "ngo" && req.user.role !== "admin") {
       return res.status(403).json({
         success: false,
         message: "Only NGOs can access this endpoint",
@@ -241,17 +235,17 @@ exports.getNGODashboardEvents = async (req, res) => {
     }
 
     const { status, search, page = 1, limit = 10 } = req.query;
-    
+
     // Build query
-    const query = { 
+    const query = {
       organizerId: req.user.id,
-      active: true 
+      active: true,
     };
-    
-    if (status && status !== 'all') {
+
+    if (status && status !== "all") {
       query.status = status;
     }
-    
+
     if (search) {
       query.$or = [
         { title: { $regex: search, $options: "i" } },
@@ -263,45 +257,47 @@ exports.getNGODashboardEvents = async (req, res) => {
 
     // Calculate pagination
     const skip = (parseInt(page) - 1) * parseInt(limit);
-    
+
     // Get total count
     const total = await Event.countDocuments(query);
-    
+
     // Get paginated events
     const events = await Event.find(query)
       .sort({ startDate: 1 })
       .skip(skip)
       .limit(parseInt(limit));
-    
+
     // Calculate status for each event
-    const eventsWithStatus = events.map(event => {
+    const eventsWithStatus = events.map((event) => {
       const now = new Date();
       const startDate = new Date(event.startDate);
       const endDate = new Date(event.endDate);
-      
-      let status = 'upcoming';
-      
+
+      let status = "upcoming";
+
       if (now > endDate) {
-        status = 'completed';
+        status = "completed";
       } else if (now >= startDate && now <= endDate) {
-        status = 'ongoing';
+        status = "ongoing";
       }
-      
+
       // Add calculated values needed by the frontend
       return {
         ...event.toObject(),
         status,
-        volunteersRegistered: event.registeredVolunteers ? event.registeredVolunteers.length : 0
+        volunteersRegistered: event.registeredVolunteers
+          ? event.registeredVolunteers.length
+          : 0,
       };
     });
-    
+
     // Return the correct structure that the client expects
     res.status(200).json({
       success: true,
       events: eventsWithStatus || [],
       totalEvents: total,
       totalPages: Math.ceil(total / parseInt(limit)),
-      currentPage: parseInt(page)
+      currentPage: parseInt(page),
     });
   } catch (error) {
     console.error("Error fetching NGO dashboard events:", error);
@@ -311,7 +307,7 @@ exports.getNGODashboardEvents = async (req, res) => {
       message: "Internal server error",
       events: [],
       totalPages: 1,
-      currentPage: 1
+      currentPage: 1,
     });
   }
 };
@@ -324,7 +320,7 @@ exports.registerForEvent = async (req, res) => {
 
     // Find the event
     const event = await Event.findById(eventId);
-    
+
     if (!event) {
       return res.status(404).json({
         success: false,
@@ -340,6 +336,11 @@ exports.registerForEvent = async (req, res) => {
       });
     }
 
+    // Initialize registeredVolunteers if it doesn't exist
+    if (!event.registeredVolunteers) {
+      event.registeredVolunteers = [];
+    }
+
     // Check if volunteer is already registered
     const alreadyRegistered = event.registeredVolunteers.some(
       (registration) => registration.volunteer.toString() === volunteerId
@@ -353,7 +354,7 @@ exports.registerForEvent = async (req, res) => {
     }
 
     // Check if event is full
-    if (event.registeredVolunteers.length >= event.volunteersNeeded) {
+    if (event.volunteersRegistered >= event.volunteersNeeded) {
       return res.status(400).json({
         success: false,
         message: "This event is already full",
@@ -363,18 +364,21 @@ exports.registerForEvent = async (req, res) => {
     // Add volunteer to event
     event.registeredVolunteers.push({
       volunteer: volunteerId,
-      status: event.requiresApproval ? 'pending' : 'approved',
-      registeredAt: new Date()
+      status: event.requiresApproval ? "pending" : "approved",
+      registeredAt: new Date(),
     });
+
+    // Increment volunteersRegistered count
+    event.volunteersRegistered = (event.volunteersRegistered || 0) + 1;
 
     await event.save();
 
     res.status(200).json({
       success: true,
-      message: event.requiresApproval 
-        ? "Successfully registered. Awaiting approval from the organizer." 
+      message: event.requiresApproval
+        ? "Successfully registered. Awaiting approval from the organizer."
         : "Successfully registered for the event.",
-      data: event
+      data: event,
     });
   } catch (error) {
     console.error("Error registering for event:", error);
@@ -389,12 +393,12 @@ exports.registerForEvent = async (req, res) => {
 exports.getEventsByNGO = async (req, res) => {
   try {
     const { ngoId } = req.params;
-    
+
     const events = await Event.find({
       organizerId: ngoId,
-      active: true
+      active: true,
     }).sort({ startDate: 1 });
-    
+
     res.status(200).json({
       success: true,
       count: events.length,
@@ -407,4 +411,72 @@ exports.getEventsByNGO = async (req, res) => {
       message: "Internal server error",
     });
   }
-}; 
+};
+
+// Get event attendees
+exports.getEventAttendees = async (req, res) => {
+  try {
+    const eventId = req.params.id;
+
+    // Find the event
+    const event = await Event.findById(eventId);
+
+    if (!event) {
+      return res.status(404).json({
+        success: false,
+        message: "Event not found",
+      });
+    }
+
+    // If no registeredVolunteers field or empty array, return empty array
+    if (
+      !event.registeredVolunteers ||
+      event.registeredVolunteers.length === 0
+    ) {
+      return res.status(200).json({
+        success: true,
+        count: 0,
+        data: [],
+      });
+    }
+
+    // Extract volunteer IDs
+    const volunteerIds = event.registeredVolunteers.map(
+      (registration) => registration.volunteer
+    );
+
+    // Fetch volunteer details
+    const volunteers = await User.find(
+      { _id: { $in: volunteerIds } },
+      "name email role"
+    );
+
+    // Map volunteers to a more friendly format with additional data
+    const attendeesData = volunteers.map((volunteer) => {
+      const registration = event.registeredVolunteers.find(
+        (reg) => reg.volunteer.toString() === volunteer._id.toString()
+      );
+
+      return {
+        id: volunteer._id,
+        name: volunteer.name,
+        email: volunteer.email,
+        status: registration?.status || "registered",
+        registeredAt: registration?.registeredAt,
+        shifts: 1, // For now, assume 1 shift per registration
+      };
+    });
+
+    res.status(200).json({
+      success: true,
+      count: attendeesData.length,
+      data: attendeesData,
+    });
+  } catch (error) {
+    console.error("Error fetching event attendees:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Internal server error",
+    });
+  }
+};

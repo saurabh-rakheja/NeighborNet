@@ -1,7 +1,6 @@
 const Participation = require("../models/participationSchema");
 const Event = require("../models/eventSchema");
 const User = require("../models/userSchema");
-const Shift = require("../models/shiftSchema");
 
 // @desc    Register volunteer for an event
 // @route   POST /api/participation/register
@@ -12,7 +11,7 @@ exports.registerForEvent = async (req, res) => {
     const volunteerId = req.user.id;
 
     // Check if volunteer role
-    if (req.user.role !== 'volunteer') {
+    if (req.user.role !== "volunteer") {
       return res.status(403).json({
         success: false,
         message: "Only volunteers can register for events",
@@ -21,7 +20,7 @@ exports.registerForEvent = async (req, res) => {
 
     // Check if volunteer is verified
     const volunteer = await User.findById(volunteerId);
-    if (!volunteer || volunteer.verificationStatus !== 'Verified') {
+    if (!volunteer || volunteer.verificationStatus !== "Verified") {
       return res.status(403).json({
         success: false,
         message: "Your profile must be verified before registering for events",
@@ -38,7 +37,7 @@ exports.registerForEvent = async (req, res) => {
     }
 
     // Check if event is active and upcoming
-    if (event.status !== 'Upcoming') {
+    if (event.status !== "Upcoming") {
       return res.status(400).json({
         success: false,
         message: "Cannot register for past, ongoing, or cancelled events",
@@ -130,7 +129,7 @@ exports.cancelRegistration = async (req, res) => {
     const volunteerId = req.user.id;
 
     // Check if volunteer role
-    if (req.user.role !== 'volunteer') {
+    if (req.user.role !== "volunteer") {
       return res.status(403).json({
         success: false,
         message: "Only volunteers can cancel their registrations",
@@ -157,7 +156,7 @@ exports.cancelRegistration = async (req, res) => {
 
     // Check if event is already completed
     const event = await Event.findById(participation.eventId);
-    if (event.status === 'Completed') {
+    if (event.status === "Completed") {
       return res.status(400).json({
         success: false,
         message: "Cannot cancel registration for a completed event",
@@ -201,7 +200,7 @@ exports.getVolunteerRegistrations = async (req, res) => {
     const volunteerId = req.user.id;
 
     // Check if volunteer role
-    if (req.user.role !== 'volunteer') {
+    if (req.user.role !== "volunteer") {
       return res.status(403).json({
         success: false,
         message: "Access denied",
@@ -209,8 +208,8 @@ exports.getVolunteerRegistrations = async (req, res) => {
     }
 
     const registrations = await Participation.find({ volunteerId })
-      .populate('eventId', 'title description startDate endDate location')
-      .populate('shiftId', 'name startTime endTime');
+      .populate("eventId", "title description startDate endDate location")
+      .populate("shiftId", "name startTime endTime");
 
     res.status(200).json({
       success: true,
@@ -234,7 +233,7 @@ exports.getEventParticipations = async (req, res) => {
     const { eventId } = req.params;
 
     // Check if NGO or admin role
-    if (req.user.role !== 'ngo' && req.user.role !== 'admin') {
+    if (req.user.role !== "ngo" && req.user.role !== "admin") {
       return res.status(403).json({
         success: false,
         message: "Access denied",
@@ -242,7 +241,7 @@ exports.getEventParticipations = async (req, res) => {
     }
 
     // If NGO, check if they own the event
-    if (req.user.role === 'ngo') {
+    if (req.user.role === "ngo") {
       const event = await Event.findById(eventId);
       if (!event) {
         return res.status(404).json({
@@ -260,8 +259,8 @@ exports.getEventParticipations = async (req, res) => {
     }
 
     const participations = await Participation.find({ eventId })
-      .populate('volunteerId', 'name email phoneNumber')
-      .populate('shiftId', 'name startTime endTime');
+      .populate("volunteerId", "name email phoneNumber")
+      .populate("shiftId", "name startTime endTime");
 
     res.status(200).json({
       success: true,
@@ -285,7 +284,7 @@ exports.checkInVolunteer = async (req, res) => {
     const { id } = req.params;
 
     // Check if NGO role or admin
-    if (req.user.role !== 'ngo' && req.user.role !== 'admin') {
+    if (req.user.role !== "ngo" && req.user.role !== "admin") {
       return res.status(403).json({
         success: false,
         message: "Access denied",
@@ -312,7 +311,7 @@ exports.checkInVolunteer = async (req, res) => {
 
     // Check if NGO owns this event
     if (
-      req.user.role === 'ngo' &&
+      req.user.role === "ngo" &&
       event.organizerId.toString() !== req.user.id
     ) {
       return res.status(403).json({
@@ -331,7 +330,8 @@ exports.checkInVolunteer = async (req, res) => {
       const shift = await Shift.findById(participation.shiftId);
       if (shift) {
         const volunteerIndex = shift.volunteers.findIndex(
-          v => v.volunteerId.toString() === participation.volunteerId.toString()
+          (v) =>
+            v.volunteerId.toString() === participation.volunteerId.toString()
         );
         
         if (volunteerIndex >= 0) {
@@ -365,7 +365,7 @@ exports.checkOutVolunteer = async (req, res) => {
     const { hoursLogged } = req.body;
 
     // Check if NGO role or admin
-    if (req.user.role !== 'ngo' && req.user.role !== 'admin') {
+    if (req.user.role !== "ngo" && req.user.role !== "admin") {
       return res.status(403).json({
         success: false,
         message: "Access denied",
@@ -392,7 +392,7 @@ exports.checkOutVolunteer = async (req, res) => {
 
     // Check if NGO owns this event
     if (
-      req.user.role === 'ngo' &&
+      req.user.role === "ngo" &&
       event.organizerId.toString() !== req.user.id
     ) {
       return res.status(403).json({
@@ -431,7 +431,8 @@ exports.checkOutVolunteer = async (req, res) => {
       if (!volunteer.volunteerInfo) {
         volunteer.volunteerInfo = {};
       }
-      volunteer.volunteerInfo.totalHours = (volunteer.volunteerInfo.totalHours || 0) + participation.hoursLogged;
+      volunteer.volunteerInfo.totalHours =
+        (volunteer.volunteerInfo.totalHours || 0) + participation.hoursLogged;
       await volunteer.save();
     }
 
@@ -440,13 +441,15 @@ exports.checkOutVolunteer = async (req, res) => {
       const shift = await Shift.findById(participation.shiftId);
       if (shift) {
         const volunteerIndex = shift.volunteers.findIndex(
-          v => v.volunteerId.toString() === participation.volunteerId.toString()
+          (v) =>
+            v.volunteerId.toString() === participation.volunteerId.toString()
         );
         
         if (volunteerIndex >= 0) {
           shift.volunteers[volunteerIndex].status = "Completed";
           shift.volunteers[volunteerIndex].checkOutTime = new Date();
-          shift.volunteers[volunteerIndex].hoursLogged = participation.hoursLogged;
+          shift.volunteers[volunteerIndex].hoursLogged =
+            participation.hoursLogged;
           await shift.save();
         }
       }
@@ -472,7 +475,7 @@ exports.checkOutVolunteer = async (req, res) => {
 exports.getAllParticipations = async (req, res) => {
   try {
     // Check if admin
-    if (req.user.role !== 'admin') {
+    if (req.user.role !== "admin") {
       return res.status(403).json({
         success: false,
         message: "Access denied",
@@ -480,9 +483,9 @@ exports.getAllParticipations = async (req, res) => {
     }
 
     const participations = await Participation.find()
-      .populate('volunteerId', 'name email')
-      .populate('eventId', 'title startDate endDate')
-      .populate('shiftId', 'name startTime endTime');
+      .populate("volunteerId", "name email")
+      .populate("eventId", "title startDate endDate")
+      .populate("shiftId", "name startTime endTime");
 
     res.status(200).json({
       success: true,

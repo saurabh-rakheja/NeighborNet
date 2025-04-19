@@ -3,33 +3,53 @@ import { Link, useLocation } from "react-router-dom";
 import {
   FiHome,
   FiCalendar,
-  FiClock,
-  FiUser,
-  FiHelpCircle,
+  FiUsers,
+  FiBarChart,
+  FiMessageSquare,
+  FiPlusCircle,
+  FiClipboard,
+  FiMenu,
+  FiX,
+  FiLogOut,
   FiSettings,
+  FiBell,
+  FiHelpCircle,
   FiChevronLeft,
   FiChevronRight,
-  FiLogOut,
-  FiBell,
-  FiBarChart,
-  FiMapPin,
-  FiUsers,
-  FiHeart,
-  FiPlusCircle,
-  FiBook,
-  FiAward,
-  FiMessageSquare,
-  FiClipboard,
-  FiLayers,
 } from "react-icons/fi";
-import useAuthStore from "../../../store/authStore";
+import useAuthStore from "../../../../store/authStore";
+import { ngoApi } from "../../../../services/ngoApi";
 
-const Sidebar = ({ isMobile, onToggle }) => {
+const NGOSidebar = ({ isMobile, onToggle }) => {
   const [collapsed, setCollapsed] = useState(false);
-  const [activeSubmenu, setActiveSubmenu] = useState(null);
+  const [pendingApplicationsCount, setPendingApplicationsCount] = useState(0);
   const location = useLocation();
   const { user, logout } = useAuthStore();
-  const [notifications, setNotifications] = useState(3);
+
+  // Fetch pending applications count
+  useEffect(() => {
+    const fetchPendingApplicationsCount = async () => {
+      try {
+        const response = await ngoApi.getPendingApplicationsCount();
+
+        if (response.success) {
+          setPendingApplicationsCount(response.count || 0);
+        }
+      } catch (error) {
+        console.error("Error fetching pending applications count:", error);
+      }
+    };
+
+    fetchPendingApplicationsCount();
+
+    // Set up periodic refresh every 5 minutes
+    const intervalId = setInterval(
+      fetchPendingApplicationsCount,
+      5 * 60 * 1000
+    );
+
+    return () => clearInterval(intervalId);
+  }, []);
 
   // Collapse sidebar by default on mobile
   useEffect(() => {
@@ -47,13 +67,13 @@ const Sidebar = ({ isMobile, onToggle }) => {
 
   const isActive = (path) => {
     // Exact match for dashboard home
-    if (path === "/dashboard" && location.pathname === "/dashboard") {
+    if (path === "/ngo-dashboard" && location.pathname === "/ngo-dashboard") {
       return true;
     }
 
     // For other paths, check if current path starts with the nav item path
     // But make sure we're not matching partial path segments
-    if (path !== "/dashboard") {
+    if (path !== "/ngo-dashboard") {
       // Ensure we match complete path segments by checking for path boundary
       return (
         location.pathname === path ||
@@ -66,84 +86,62 @@ const Sidebar = ({ isMobile, onToggle }) => {
     return false;
   };
 
-  const toggleSubmenu = (index) => {
-    setActiveSubmenu(activeSubmenu === index ? null : index);
-  };
-
   const toggleSidebar = () => {
     setCollapsed(!collapsed);
   };
 
-  // User capabilities based navigation
-  const isAdmin = user?.role === "admin" || user?.isAdmin;
-  const hasNGOCapabilities = user?.role === "ngo";
-  const hasVolunteerCapabilities = user?.role === "volunteer";
-
-  // Common navigation items for all users
-  const generalNav = [
+  // Navigation items for NGO dashboard
+  const navItems = [
     {
-      name: "Dashboard",
-      icon: <FiHome />,
-      path: "/dashboard",
+      name: "Overview",
+      icon: <FiHome className="h-5 w-5" />,
+      path: "/ngo-dashboard",
     },
     {
       name: "Events",
-      icon: <FiCalendar />,
-      path: "/dashboard/events",
+      icon: <FiCalendar className="h-5 w-5" />,
+      path: "/ngo-dashboard/events",
+    },
+    {
+      name: "Volunteers",
+      icon: <FiUsers className="h-5 w-5" />,
+      path: "/ngo-dashboard/volunteers",
+    },
+    {
+      name: "Analytics",
+      icon: <FiBarChart className="h-5 w-5" />,
+      path: "/ngo-dashboard/analytics",
+    },
+    {
+      name: "Create Event",
+      icon: <FiPlusCircle className="h-5 w-5" />,
+      path: "/ngo-dashboard/create-event",
+    },
+    {
+      name: "Applications",
+      icon: <FiClipboard className="h-5 w-5" />,
+      path: "/ngo-dashboard/applications",
+      badge: pendingApplicationsCount > 0 ? pendingApplicationsCount : null,
+      badgeColor: "bg-amber-500 text-white",
+    },
+    {
+      name: "Messages",
+      icon: <FiMessageSquare className="h-5 w-5" />,
+      path: "/ngo-dashboard/messages",
     },
   ];
 
-  // Volunteer specific navigation items
-  const volunteerNav = hasVolunteerCapabilities
-    ? [
-        {
-          name: "My Profile",
-          icon: <FiUser />,
-          path: "/dashboard/profile",
-        },
-        {
-          name: "My Applications",
-          icon: <FiClipboard />,
-          path: "/dashboard/applications",
-        },
-        {
-          name: "My Impact",
-          icon: <FiHeart />,
-          path: "/dashboard/impact",
-        },
-      ]
-    : [];
-
-  const adminNav = isAdmin
-    ? [
-        {
-          name: "Admin Panel",
-          icon: <FiUsers />,
-          path: "/dashboard/admin",
-        },
-        {
-          name: "Manage Volunteers",
-          icon: <FiUsers />,
-          path: "/dashboard/admin/volunteers",
-        },
-        {
-          name: "Reports",
-          icon: <FiBarChart />,
-          path: "/dashboard/admin/reports",
-        },
-      ]
-    : [];
-
+  // Support navigation items
   const supportNav = [
     {
       name: "Help Center",
-      icon: <FiHelpCircle />,
-      path: "/dashboard/help",
+      icon: <FiHelpCircle className="h-5 w-5" />,
+      path: "/ngo-dashboard/help",
     },
     {
       name: "Settings",
-      icon: <FiSettings />,
-      path: "/dashboard/settings",
+      icon: <FiSettings className="h-5 w-5" />,
+      path: "/ngo-dashboard/settings",
     },
   ];
 
@@ -158,7 +156,7 @@ const Sidebar = ({ isMobile, onToggle }) => {
     if (items.length === 0) return null;
 
     return (
-      <div className="mb-6">
+      <div className="mb-6 px-2">
         {!collapsed && title && (
           <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-4 mb-2">
             {title}
@@ -171,9 +169,7 @@ const Sidebar = ({ isMobile, onToggle }) => {
                 to={item.path}
                 className={`flex items-center px-4 py-3 rounded-xl transition-all duration-200 ${
                   isActive(item.path)
-                    ? hasNGOCapabilities
-                      ? "bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-medium"
-                      : "bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-medium"
+                    ? "bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-medium"
                     : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
                 } ${collapsed ? "justify-center" : ""}`}
               >
@@ -211,14 +207,8 @@ const Sidebar = ({ isMobile, onToggle }) => {
     >
       {/* Logo */}
       <div className="flex items-center justify-between p-5 border-b border-gray-100">
-        <Link to="/dashboard" className="flex items-center">
-          <div
-            className={`h-10 w-10 rounded-xl flex items-center justify-center shadow-lg ${
-              hasNGOCapabilities
-                ? "bg-gradient-to-br from-blue-600 to-cyan-500"
-                : "bg-gradient-to-br from-indigo-600 to-purple-600"
-            }`}
-          >
+        <Link to="/ngo-dashboard" className="flex items-center">
+          <div className="h-10 w-10 rounded-xl flex items-center justify-center shadow-lg bg-gradient-to-br from-blue-600 to-cyan-500">
             <svg
               className="w-6 h-6 text-white"
               xmlns="http://www.w3.org/2000/svg"
@@ -237,7 +227,7 @@ const Sidebar = ({ isMobile, onToggle }) => {
           {!collapsed && (
             <div className="ml-3">
               <span className="text-lg font-bold text-gray-800">
-                NeighborNet
+                NGO Portal
               </span>
             </div>
           )}
@@ -255,71 +245,47 @@ const Sidebar = ({ isMobile, onToggle }) => {
         </button>
       </div>
 
-      {/* User profile summary */}
-      {!collapsed && (
-        <div className="px-4 py-4 border-b border-gray-100">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              {user?.avatar ? (
-                <img
-                  src={user.avatar}
-                  alt={user.name}
-                  className="w-10 h-10 rounded-full object-cover border-2 border-indigo-100"
-                />
-              ) : (
-                <div
-                  className={`w-10 h-10 rounded-full flex items-center justify-center font-medium border-2 ${
-                    hasNGOCapabilities
-                      ? "bg-gradient-to-br from-blue-100 to-cyan-100 text-blue-600 border-blue-100"
-                      : "bg-gradient-to-br from-indigo-100 to-purple-100 text-indigo-600 border-indigo-100"
-                  }`}
-                >
-                  {user?.name?.substring(0, 2) || "U"}
-                </div>
-              )}
+      {/* Navigation */}
+      <div className="flex-1 overflow-y-auto pt-5 pb-4">
+        {renderNavSection(collapsed ? "" : "Main Navigation", navItems)}
+        {renderNavSection(collapsed ? "" : "Support", supportNav)}
+      </div>
+
+      {/* User Profile & Logout */}
+      <div className="border-t border-gray-100 p-4">
+        {!collapsed ? (
+          <div className="flex items-center mb-4">
+            <div className="h-10 w-10 rounded-full bg-blue-500 flex items-center justify-center text-white">
+              {user?.name?.charAt(0) || "N"}
             </div>
-            <div className="ml-3 overflow-hidden">
-              <p className="text-sm font-medium text-gray-800 truncate">
-                {user?.name || "User"}
+            <div className="ml-3">
+              <p className="text-sm font-medium text-gray-800">
+                {user?.name || "NGO User"}
               </p>
-              <p className="text-xs text-gray-500 truncate">
-                {hasNGOCapabilities && hasVolunteerCapabilities
-                  ? "Organization & Volunteer"
-                  : hasNGOCapabilities
-                  ? "Organization"
-                  : "Volunteer"}
+              <p className="text-xs text-gray-500">
+                {user?.ngoInfo?.organization || "Organization"}
               </p>
             </div>
           </div>
-        </div>
-      )}
-
-      {/* Navigation menu */}
-      <div className="flex-1 overflow-y-auto py-4 px-3">
-        {renderNavSection("General", generalNav)}
-        {/* Show Volunteering section if user has volunteer capabilities */}
-        {hasVolunteerCapabilities &&
-          renderNavSection("My Volunteering", volunteerNav)}
-
-        {isAdmin && renderNavSection("Administration", adminNav)}
-
-        {renderNavSection("Support", supportNav)}
-      </div>
-
-      {/* Logout button */}
-      <div className="p-3 border-t border-gray-100">
+        ) : (
+          <div className="flex justify-center mb-4">
+            <div className="h-10 w-10 rounded-full bg-blue-500 flex items-center justify-center text-white">
+              {user?.name?.charAt(0) || "N"}
+            </div>
+          </div>
+        )}
         <button
           onClick={handleLogout}
-          className={`w-full flex items-center px-4 py-2 text-gray-600 rounded-lg hover:bg-gray-100 hover:text-gray-900 ${
-            collapsed ? "justify-center" : ""
+          className={`w-full rounded-xl py-2 flex items-center justify-center text-gray-600 hover:bg-gray-100 hover:text-red-500 transition-colors ${
+            !collapsed ? "px-3" : "px-0"
           }`}
         >
-          <FiLogOut className="text-lg" />
-          {!collapsed && <span className="ml-3 text-sm">Logout</span>}
+          <FiLogOut size={collapsed ? 20 : 18} />
+          {!collapsed && <span className="ml-2 text-sm">Logout</span>}
         </button>
       </div>
     </aside>
   );
 };
 
-export default Sidebar;
+export default NGOSidebar;

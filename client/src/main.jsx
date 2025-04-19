@@ -19,57 +19,31 @@ import DashboardLayout from "./components/pages/layouts/DashboardLayout";
 import ProtectedRoute from "./components/ProtectedRoute";
 import LandingLayout from "./components/pages/layouts/LandingLayout";
 
-// Dashboard components
-import Events from "./components/pages/dashboard/Events";
-import EventDetail from "./components/pages/dashboard/EventDetail";
-import VolunteerProfile from "./components/pages/dashboard/VolunteerProfile";
-import VolunteerImpact from "./components/pages/dashboard/VolunteerImpact";
-import AdminPanel from "./components/pages/dashboard/AdminPanel";
-import MyShifts from "./components/pages/dashboard/MyShifts";
-import CreateEvent from "./components/pages/dashboard/CreateEvent";
-import CreateShift from "./components/pages/dashboard/CreateShift";
-import VolunteerList from "./components/pages/dashboard/VolunteerList";
+// Public pages
+import PublicEvents from "./components/pages/public/PublicEvents";
+import PublicEventDetails from "./components/pages/public/EventDetails";
 
-import AdminReports from "./components/pages/dashboard/AdminReports";
+// Dashboard components
+import Events from "./components/pages/dashboard/volunteer/Events";
+import EventDetail from "./components/pages/dashboard/volunteer/EventDetail";
+import VolunteerProfile from "./components/pages/dashboard/volunteer/VolunteerProfile";
+import VolunteerImpact from "./components/pages/dashboard/volunteer/VolunteerImpact";
+import AdminPanel from "./components/pages/dashboard/admin/AdminPanel";
+import VolunteerList from "./components/pages/dashboard/admin/VolunteerList";
+import VolunteerOnboarding from "./components/pages/onboarding/VolunteerOnboarding";
+
+import AdminReports from "./components/pages/dashboard/admin/AdminReports";
 
 // New components we've added
-import EventManagement from "./components/pages/dashboard/EventManagement";
-import OpportunitySearch from "./components/pages/dashboard/OpportunitySearch";
-import NGOAnalytics from "./components/pages/dashboard/ngo/NGOAnalytics";
+import OpportunitySearch from "./components/pages/dashboard/volunteer/OpportunitySearch";
+import MyApplications from "./components/pages/dashboard/volunteer/MyApplications";
 
 // Role-specific dashboards
 import NGODashboard from "./components/pages/dashboard/NGODashboard";
-import VolunteerDashboard from "./components/pages/dashboard/VolunteerDashboard";
+import VolunteerDashboard from "./components/pages/dashboard/volunteer/VolunteerDashboard";
 
 // Auth store for role-based routing
 import useAuthStore from "./store/authStore";
-
-// Placeholder components for features not yet implemented
-const Applications = () => (
-  <div className="p-8 text-center text-gray-600">
-    Volunteer Applications (Coming Soon)
-  </div>
-);
-const Skills = () => (
-  <div className="p-8 text-center text-gray-600">
-    Skills Development (Coming Soon)
-  </div>
-);
-const Certificates = () => (
-  <div className="p-8 text-center text-gray-600">
-    Certificates & Badges (Coming Soon)
-  </div>
-);
-const Training = () => (
-  <div className="p-8 text-center text-gray-600">
-    Training Programs (Coming Soon)
-  </div>
-);
-const Messages = () => (
-  <div className="p-8 text-center text-gray-600">
-    Messaging Center (Coming Soon)
-  </div>
-);
 
 // Dashboard resolver component to redirect based on user capabilities
 const DashboardResolver = () => {
@@ -78,16 +52,10 @@ const DashboardResolver = () => {
   console.log("Current user data:", user);
 
   // Check for NGO and volunteer capabilities based on user data
-  const hasNGOCapabilities = 
-    user?.ngoInfo?.organization || 
-    user?.role === "ngo";
-    
-  const hasVolunteerCapabilities =
-    user?.volunteerInfo?.skills?.length > 0 || 
-    user?.role === "volunteer";
+  const hasNGOCapabilities =
+    user?.ngoInfo?.organization || user?.role === "ngo";
 
-  // If user has both capabilities, redirect to the appropriate dashboard
-  // Otherwise, prioritize the capability they have
+  // If user has NGO capabilities, redirect to the appropriate dashboard
   if (hasNGOCapabilities) {
     console.log("User has NGO capabilities, redirecting to NGO dashboard");
     return <Navigate to="/ngo-dashboard" replace />;
@@ -97,14 +65,14 @@ const DashboardResolver = () => {
   }
 };
 
-import VolunteerOnboarding from "./components/pages/onboarding/VolunteerOnboarding";
-
 const router = createBrowserRouter(
   createRoutesFromElements(
     <Route>
       {/* Public Routes */}
       <Route path="/" element={<LandingLayout />}>
         <Route index element={<LandingPage />} />
+        <Route path="events" element={<PublicEvents />} />
+        <Route path="events/:id" element={<PublicEventDetails />} />
       </Route>
 
       {/* Auth Routes */}
@@ -117,7 +85,7 @@ const router = createBrowserRouter(
       <Route element={<ProtectedRoute />}>
         {/* NGO Dashboard with its own layout and child routes */}
         <Route path="ngo-dashboard/*" element={<NGODashboard />} />
-        
+
         {/* Standard Dashboard Layout for Volunteer */}
         <Route element={<DashboardLayout />}>
           {/* Main dashboard (resolves to Volunteer dashboard since NGO users are redirected) */}
@@ -126,21 +94,15 @@ const router = createBrowserRouter(
           {/* Common routes */}
           <Route path="dashboard/events" element={<Events />} />
           <Route path="dashboard/events/:id" element={<EventDetail />} />
-          <Route path="dashboard/my-shifts" element={<MyShifts />} />
 
           {/* Volunteer specific routes */}
-          <Route
-            path="dashboard/profile"
-            element={<VolunteerProfile />}
-          />
+          <Route path="dashboard/profile" element={<VolunteerProfile />} />
           <Route path="dashboard/impact" element={<VolunteerImpact />} />
-          <Route path="dashboard/skills" element={<Skills />} />
-          <Route path="dashboard/certificates" element={<Certificates />} />
-          <Route path="dashboard/training" element={<Training />} />
           <Route
             path="dashboard/find-opportunities"
             element={<OpportunitySearch />}
           />
+          <Route path="dashboard/applications" element={<MyApplications />} />
 
           {/* Admin routes */}
           <Route path="dashboard/admin" element={<AdminPanel />} />

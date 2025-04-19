@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import useAuthStore from "../../../store/authStore";
-import useUserStore from "../../../store/slices/userStore";
+import useAuthStore from "../../../../store/authStore";
+import useUserStore from "../../../../store/slices/userStore";
 import axios from "axios";
-import { 
-  FiUser, 
-  FiMail, 
-  FiPhone, 
+import {
+  FiUser,
+  FiMail,
+  FiPhone,
   FiMapPin,
   FiEdit,
   FiCalendar,
@@ -19,7 +19,7 @@ import {
   FiTrash2,
   FiClock,
   FiBarChart2,
-  FiChevronDown
+  FiChevronDown,
 } from "react-icons/fi";
 import { toast } from "react-toastify";
 
@@ -70,7 +70,7 @@ const COMMON_SKILLS = [
   "Project Management",
   "Marketing",
   "Web Development",
-  "Research"
+  "Research",
 ];
 
 const COMMON_INTERESTS = [
@@ -98,12 +98,22 @@ const COMMON_INTERESTS = [
   "Technology Access",
   "Politics & Advocacy",
   "Religious Activities",
-  "History & Preservation"
+  "History & Preservation",
 ];
 
 const VolunteerProfile = () => {
   const { user } = useAuthStore();
-  const { profile, skills, interests, fetchProfile, fetchSkills, fetchInterests, updateProfile, updateSkills, updateInterests } = useUserStore();
+  const {
+    profile,
+    skills,
+    interests,
+    fetchProfile,
+    fetchSkills,
+    fetchInterests,
+    updateProfile,
+    updateSkills,
+    updateInterests,
+  } = useUserStore();
   const [loading, setLoading] = useState(true);
   const [editMode, setEditMode] = useState(false);
   const [userData, setUserData] = useState(null);
@@ -128,7 +138,7 @@ const VolunteerProfile = () => {
     emergencyContact: {
       name: "",
       relationship: "",
-      phone: ""
+      phone: "",
     },
     education: "",
     occupation: "",
@@ -148,12 +158,12 @@ const VolunteerProfile = () => {
     organizationSize: "",
     organizationRegistrationNumber: "",
     organizationTaxId: "",
-    organizationLogo: ""
+    organizationLogo: "",
   });
   const [newSkill, setNewSkill] = useState("");
   const [newInterest, setNewInterest] = useState("");
   const [newLocation, setNewLocation] = useState("");
-  
+
   // State for dropdowns
   const [selectedSkill, setSelectedSkill] = useState("");
   const [selectedInterest, setSelectedInterest] = useState("");
@@ -168,12 +178,12 @@ const VolunteerProfile = () => {
       setLoading(true);
       try {
         // Fetch complete user profile from the API
-        const response = await api.get('/users/profile');
-        
+        const response = await api.get("/users/profile");
+
         if (response.data.success) {
           const userData = response.data.data;
           setUserData(userData);
-          
+
           // Map API response to component state
           setFormData({
             name: userData.name || "",
@@ -186,52 +196,63 @@ const VolunteerProfile = () => {
             zipCode: userData.profile?.address?.zipCode || "",
             country: userData.profile?.address?.country || "India",
             bio: userData.profile?.bio || "",
-            birthdate: userData.volunteerInfo?.dateOfBirth ? new Date(userData.volunteerInfo.dateOfBirth).toISOString().split('T')[0] : "",
+            birthdate: userData.volunteerInfo?.dateOfBirth
+              ? new Date(userData.volunteerInfo.dateOfBirth)
+                  .toISOString()
+                  .split("T")[0]
+              : "",
             // Volunteer specific fields
             availability: userData.volunteerInfo?.availability || {},
             skills: userData.volunteerInfo?.skills || [],
             interests: userData.volunteerInfo?.interests || [],
-            preferredLocations: userData.volunteerInfo?.preferredLocations || [],
+            preferredLocations:
+              userData.volunteerInfo?.preferredLocations || [],
             experience: userData.volunteerInfo?.experience || "Beginner",
             emergencyContact: {
               name: userData.volunteerInfo?.emergencyContact?.name || "",
-              relationship: userData.volunteerInfo?.emergencyContact?.relationship || "",
-              phone: userData.volunteerInfo?.emergencyContact?.phone || ""
+              relationship:
+                userData.volunteerInfo?.emergencyContact?.relationship || "",
+              phone: userData.volunteerInfo?.emergencyContact?.phone || "",
             },
             education: userData.volunteerInfo?.education || "",
             occupation: userData.volunteerInfo?.occupation || "",
             maxDistance: userData.volunteerInfo?.maxDistance || 15,
             hasDriverLicense: userData.volunteerInfo?.hasDriverLicense || false,
             hasVehicle: userData.volunteerInfo?.hasVehicle || false,
-            hasCriminalRecord: userData.volunteerInfo?.hasCriminalRecord || false,
-            criminalRecordDetails: userData.volunteerInfo?.criminalRecordDetails || "",
+            hasCriminalRecord:
+              userData.volunteerInfo?.hasCriminalRecord || false,
+            criminalRecordDetails:
+              userData.volunteerInfo?.criminalRecordDetails || "",
             additionalInfo: userData.volunteerInfo?.additionalInfo || "",
             totalHours: userData.volunteerInfo?.totalHours || 0,
             // NGO specific fields
             organization: userData.ngoInfo?.organization || "",
-            organizationDescription: userData.ngoInfo?.details?.description || "",
+            organizationDescription:
+              userData.ngoInfo?.details?.description || "",
             organizationWebsite: userData.ngoInfo?.details?.website || "",
             organizationMission: userData.ngoInfo?.details?.mission || "",
-            organizationFoundedYear: userData.ngoInfo?.details?.foundedYear || "",
+            organizationFoundedYear:
+              userData.ngoInfo?.details?.foundedYear || "",
             organizationSize: userData.ngoInfo?.details?.size || "",
-            organizationRegistrationNumber: userData.ngoInfo?.details?.registrationNumber || "",
+            organizationRegistrationNumber:
+              userData.ngoInfo?.details?.registrationNumber || "",
             organizationTaxId: userData.ngoInfo?.details?.taxId || "",
-            organizationLogo: userData.ngoInfo?.logo || ""
+            organizationLogo: userData.ngoInfo?.logo || "",
           });
         } else {
           toast.error("Failed to load profile data");
         }
-        
+
         setLoading(false);
       } catch (error) {
         console.error("Error fetching user data from API:", error);
-        
+
         // Fallback to store data if API fails
         try {
           await fetchProfile();
           await fetchSkills();
           await fetchInterests();
-          
+
           if (profile) {
             setFormData({
               name: profile.name || "",
@@ -244,7 +265,9 @@ const VolunteerProfile = () => {
               zipCode: profile.zipCode || "",
               country: "India",
               bio: profile.bio || "",
-              birthdate: profile.birthdate ? new Date(profile.birthdate).toISOString().split('T')[0] : "",
+              birthdate: profile.birthdate
+                ? new Date(profile.birthdate).toISOString().split("T")[0]
+                : "",
               availability: profile.availability || {},
               skills: skills || [],
               interests: interests || [],
@@ -253,12 +276,12 @@ const VolunteerProfile = () => {
               emergencyContact: profile.emergencyContact || {
                 name: "",
                 relationship: "",
-                phone: ""
+                phone: "",
               },
               education: profile.education || "",
               occupation: profile.occupation || "",
               maxDistance: profile.maxDistance || 15,
-              hasDriverLicense: profile.hasDriverLicense || false, 
+              hasDriverLicense: profile.hasDriverLicense || false,
               hasVehicle: profile.hasVehicle || false,
               hasCriminalRecord: profile.hasCriminalRecord || false,
               criminalRecordDetails: profile.criminalRecordDetails || "",
@@ -271,46 +294,55 @@ const VolunteerProfile = () => {
               organizationMission: profile.organizationMission || "",
               organizationFoundedYear: profile.organizationFoundedYear || "",
               organizationSize: profile.organizationSize || "",
-              organizationRegistrationNumber: profile.organizationRegistrationNumber || "",
+              organizationRegistrationNumber:
+                profile.organizationRegistrationNumber || "",
               organizationTaxId: profile.organizationTaxId || "",
-              organizationLogo: profile.organizationLogo || ""
+              organizationLogo: profile.organizationLogo || "",
             });
           }
         } catch (storeError) {
           console.error("Error fetching from store:", storeError);
           toast.error("Failed to load profile data");
         }
-        
+
         setLoading(false);
       }
     };
-    
+
     fetchUserData();
-  }, [fetchProfile, fetchSkills, fetchInterests, profile, skills, interests, user]);
+  }, [
+    fetchProfile,
+    fetchSkills,
+    fetchInterests,
+    profile,
+    skills,
+    interests,
+    user,
+  ]);
 
   // Handle form input changes
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData({
       ...formData,
-      [name]: value
+      [name]: value,
     });
   };
 
   // Handle adding a skill from dropdown
   const handleSelectSkill = (skill) => {
     // Check if skill already exists
-    if (formData.skills.some(s => s.toLowerCase() === skill.toLowerCase())) {
+    if (formData.skills.some((s) => s.toLowerCase() === skill.toLowerCase())) {
       toast.info("This skill is already in your profile");
       return;
     }
-    
+
     const updatedSkills = [...formData.skills, skill];
     setFormData({
       ...formData,
-      skills: updatedSkills
+      skills: updatedSkills,
     });
-    
+
     setSelectedSkill("");
     setSkillDropdownOpen(false);
   };
@@ -318,20 +350,24 @@ const VolunteerProfile = () => {
   // Handle adding a custom skill
   const handleAddCustomSkill = () => {
     if (!newSkill.trim()) return;
-    
+
     // Check if skill already exists
-    if (formData.skills.some(s => s.toLowerCase() === newSkill.toLowerCase().trim())) {
+    if (
+      formData.skills.some(
+        (s) => s.toLowerCase() === newSkill.toLowerCase().trim()
+      )
+    ) {
       toast.info("This skill is already in your profile");
       setNewSkill("");
       return;
     }
-    
+
     const updatedSkills = [...formData.skills, newSkill.trim()];
     setFormData({
       ...formData,
-      skills: updatedSkills
+      skills: updatedSkills,
     });
-    
+
     setNewSkill("");
     setShowCustomSkillInput(false);
   };
@@ -343,13 +379,13 @@ const VolunteerProfile = () => {
       toast.info("This interest is already in your profile");
       return;
     }
-    
+
     const updatedInterests = [...formData.interests, interest];
     setFormData({
       ...formData,
-      interests: updatedInterests
+      interests: updatedInterests,
     });
-    
+
     setSelectedInterest("");
     setInterestDropdownOpen(false);
   };
@@ -357,20 +393,20 @@ const VolunteerProfile = () => {
   // Handle adding a custom interest
   const handleAddCustomInterest = () => {
     if (!newInterest.trim()) return;
-    
+
     // Check if interest already exists
     if (formData.interests.includes(newInterest.trim())) {
       toast.info("This interest is already in your profile");
       setNewInterest("");
       return;
     }
-    
+
     const updatedInterests = [...formData.interests, newInterest.trim()];
     setFormData({
       ...formData,
-      interests: updatedInterests
+      interests: updatedInterests,
     });
-    
+
     setNewInterest("");
     setShowCustomInterestInput(false);
   };
@@ -381,7 +417,7 @@ const VolunteerProfile = () => {
     updatedSkills.splice(index, 1);
     setFormData({
       ...formData,
-      skills: updatedSkills
+      skills: updatedSkills,
     });
   };
 
@@ -391,32 +427,35 @@ const VolunteerProfile = () => {
     updatedInterests.splice(index, 1);
     setFormData({
       ...formData,
-      interests: updatedInterests
+      interests: updatedInterests,
     });
   };
-  
+
   // Function to add a custom preferred location
   const handleAddCustomLocation = () => {
     if (!newLocation.trim()) return;
-    
+
     // Check if location already exists to avoid duplicates
     if (formData.preferredLocations.includes(newLocation.trim())) {
       toast.info("This location is already in your preferences");
       setNewLocation("");
       return;
     }
-    
-    const updatedLocations = [...formData.preferredLocations, newLocation.trim()];
+
+    const updatedLocations = [
+      ...formData.preferredLocations,
+      newLocation.trim(),
+    ];
     setFormData({
       ...formData,
-      preferredLocations: updatedLocations
+      preferredLocations: updatedLocations,
     });
     setNewLocation("");
   };
 
   // Handle locations input key press for easier entry
   const handleLocationKeyPress = (e) => {
-    if (e.key === 'Enter') {
+    if (e.key === "Enter") {
       e.preventDefault();
       handleAddCustomLocation();
     }
@@ -425,10 +464,10 @@ const VolunteerProfile = () => {
   // Handle form submission - update directly through API
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     try {
       setLoading(true);
-      
+
       // Prepare data for API update - map to match userSchema
       const apiUpdateData = {
         name: formData.name,
@@ -439,11 +478,11 @@ const VolunteerProfile = () => {
             city: formData.city,
             state: formData.state,
             zipCode: formData.zipCode,
-            country: formData.country
+            country: formData.country,
           },
           bio: formData.bio,
         },
-        
+
         // Volunteer-specific fields
         volunteerInfo: {
           dateOfBirth: formData.birthdate,
@@ -455,7 +494,7 @@ const VolunteerProfile = () => {
           emergencyContact: {
             name: formData.emergencyContact.name,
             relationship: formData.emergencyContact.relationship,
-            phone: formData.emergencyContact.phone
+            phone: formData.emergencyContact.phone,
           },
           education: formData.education,
           occupation: formData.occupation,
@@ -465,40 +504,49 @@ const VolunteerProfile = () => {
           hasCriminalRecord: formData.hasCriminalRecord,
           criminalRecordDetails: formData.criminalRecordDetails,
           additionalInfo: formData.additionalInfo,
-        }
+        },
       };
-      
+
       // Only add organization fields if the user is an NGO
-      if (formData.role === 'ngo') {
+      if (formData.role === "ngo") {
         apiUpdateData.ngoInfo = {
           organization: formData.organization,
-          details: {}
+          details: {},
         };
-        
+
         // Only include valid organizational details (skip empty enum fields)
-        if (formData.organizationDescription) apiUpdateData.ngoInfo.details.description = formData.organizationDescription;
-        if (formData.organizationWebsite) apiUpdateData.ngoInfo.details.website = formData.organizationWebsite;
-        if (formData.organizationMission) apiUpdateData.ngoInfo.details.mission = formData.organizationMission;
-        if (formData.organizationFoundedYear) apiUpdateData.ngoInfo.details.foundedYear = formData.organizationFoundedYear;
-        if (formData.organizationRegistrationNumber) apiUpdateData.ngoInfo.details.registrationNumber = formData.organizationRegistrationNumber;
-        if (formData.organizationTaxId) apiUpdateData.ngoInfo.details.taxId = formData.organizationTaxId;
-        
+        if (formData.organizationDescription)
+          apiUpdateData.ngoInfo.details.description =
+            formData.organizationDescription;
+        if (formData.organizationWebsite)
+          apiUpdateData.ngoInfo.details.website = formData.organizationWebsite;
+        if (formData.organizationMission)
+          apiUpdateData.ngoInfo.details.mission = formData.organizationMission;
+        if (formData.organizationFoundedYear)
+          apiUpdateData.ngoInfo.details.foundedYear =
+            formData.organizationFoundedYear;
+        if (formData.organizationRegistrationNumber)
+          apiUpdateData.ngoInfo.details.registrationNumber =
+            formData.organizationRegistrationNumber;
+        if (formData.organizationTaxId)
+          apiUpdateData.ngoInfo.details.taxId = formData.organizationTaxId;
+
         // Handle enum field - don't send empty string
         if (formData.organizationSize) {
           apiUpdateData.ngoInfo.details.size = formData.organizationSize;
         }
-        
+
         // Add logo only if it exists
         if (formData.organizationLogo) {
           apiUpdateData.ngoInfo.logo = formData.organizationLogo;
         }
       }
-      
+
       console.log("Updating profile with data:", apiUpdateData);
-      
+
       // Update user profile through API
-      const response = await api.put('/users/profile', apiUpdateData);
-      
+      const response = await api.put("/users/profile", apiUpdateData);
+
       if (response.data.success) {
         // Also update through the store for state consistency
         await updateProfile({
@@ -513,28 +561,31 @@ const VolunteerProfile = () => {
           preferredLocations: formData.preferredLocations,
           experience: formData.experience,
           education: formData.education,
-          occupation: formData.occupation
+          occupation: formData.occupation,
         });
-        
+
         await updateSkills(formData.skills);
         await updateInterests(formData.interests);
-        
+
         toast.success("Profile updated successfully");
         setEditMode(false);
-        
+
         // Refresh user data
-        const updatedResponse = await api.get('/users/profile');
+        const updatedResponse = await api.get("/users/profile");
         if (updatedResponse.data.success) {
           setUserData(updatedResponse.data.data);
         }
       } else {
         toast.error("Failed to update profile");
       }
-      
+
       setLoading(false);
     } catch (error) {
       console.error("Error updating profile:", error);
-      toast.error("Failed to update profile: " + (error.response?.data?.message || error.message));
+      toast.error(
+        "Failed to update profile: " +
+          (error.response?.data?.message || error.message)
+      );
       setLoading(false);
     }
   };
@@ -553,7 +604,11 @@ const VolunteerProfile = () => {
         zipCode: userData.profile?.address?.zipCode || "",
         country: userData.profile?.address?.country || "India",
         bio: userData.profile?.bio || "",
-        birthdate: userData.volunteerInfo?.dateOfBirth ? new Date(userData.volunteerInfo.dateOfBirth).toISOString().split('T')[0] : "",
+        birthdate: userData.volunteerInfo?.dateOfBirth
+          ? new Date(userData.volunteerInfo.dateOfBirth)
+              .toISOString()
+              .split("T")[0]
+          : "",
         // Make sure we include all fields here too
         availability: userData.volunteerInfo?.availability || {},
         skills: userData.volunteerInfo?.skills || [],
@@ -562,8 +617,9 @@ const VolunteerProfile = () => {
         experience: userData.volunteerInfo?.experience || "Beginner",
         emergencyContact: {
           name: userData.volunteerInfo?.emergencyContact?.name || "",
-          relationship: userData.volunteerInfo?.emergencyContact?.relationship || "",
-          phone: userData.volunteerInfo?.emergencyContact?.phone || ""
+          relationship:
+            userData.volunteerInfo?.emergencyContact?.relationship || "",
+          phone: userData.volunteerInfo?.emergencyContact?.phone || "",
         },
         education: userData.volunteerInfo?.education || "",
         occupation: userData.volunteerInfo?.occupation || "",
@@ -571,7 +627,8 @@ const VolunteerProfile = () => {
         hasDriverLicense: userData.volunteerInfo?.hasDriverLicense || false,
         hasVehicle: userData.volunteerInfo?.hasVehicle || false,
         hasCriminalRecord: userData.volunteerInfo?.hasCriminalRecord || false,
-        criminalRecordDetails: userData.volunteerInfo?.criminalRecordDetails || "",
+        criminalRecordDetails:
+          userData.volunteerInfo?.criminalRecordDetails || "",
         additionalInfo: userData.volunteerInfo?.additionalInfo || "",
         totalHours: userData.volunteerInfo?.totalHours || 0,
         // NGO specific fields
@@ -581,9 +638,10 @@ const VolunteerProfile = () => {
         organizationMission: userData.ngoInfo?.details?.mission || "",
         organizationFoundedYear: userData.ngoInfo?.details?.foundedYear || "",
         organizationSize: userData.ngoInfo?.details?.size || "",
-        organizationRegistrationNumber: userData.ngoInfo?.details?.registrationNumber || "",
+        organizationRegistrationNumber:
+          userData.ngoInfo?.details?.registrationNumber || "",
         organizationTaxId: userData.ngoInfo?.details?.taxId || "",
-        organizationLogo: userData.ngoInfo?.logo || ""
+        organizationLogo: userData.ngoInfo?.logo || "",
       });
     }
     setEditMode(false);
@@ -595,7 +653,9 @@ const VolunteerProfile = () => {
     // If no name is provided, use a default placeholder
     const userName = name || "Volunteer";
     // Encode the name for URL and specify size, background color, and text color
-    return `https://ui-avatars.com/api/?name=${encodeURIComponent(userName)}&size=128&background=6366F1&color=ffffff&bold=true`;
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(
+      userName
+    )}&size=128&background=6366F1&color=ffffff&bold=true`;
   };
 
   if (loading && !userData && !profile) {
@@ -614,21 +674,23 @@ const VolunteerProfile = () => {
           {/* Profile Image */}
           <div className="relative">
             <div className="w-24 h-24 md:w-32 md:h-32 rounded-full bg-white/30 flex items-center justify-center overflow-hidden">
-              <img 
+              <img
                 src={getAvatarUrl(formData.name)}
-                alt={formData.name || "Volunteer"} 
+                alt={formData.name || "Volunteer"}
                 className="w-full h-full object-cover"
               />
             </div>
           </div>
-          
+
           {/* Profile Info */}
           <div className="flex-1 text-center md:text-left">
             <h1 className="text-2xl md:text-3xl font-bold mb-2">
               {formData.name || "Volunteer"}
             </h1>
-            <p className="text-white/80 mb-4">{formData.bio || "No bio provided yet"}</p>
-            
+            <p className="text-white/80 mb-4">
+              {formData.bio || "No bio provided yet"}
+            </p>
+
             <div className="flex flex-wrap justify-center md:justify-start gap-4 mt-2">
               {!editMode && (
                 <button
@@ -638,7 +700,7 @@ const VolunteerProfile = () => {
                   <FiEdit className="text-sm" /> Edit Profile
                 </button>
               )}
-              
+
               {editMode && (
                 <>
                   <button
@@ -648,7 +710,7 @@ const VolunteerProfile = () => {
                   >
                     <FiSave className="text-sm" /> Save Changes
                   </button>
-                  
+
                   <button
                     onClick={handleCancelEdit}
                     className="flex items-center gap-2 bg-white/20 hover:bg-white/30 transition-colors px-4 py-2 rounded-lg"
@@ -662,31 +724,39 @@ const VolunteerProfile = () => {
           </div>
         </div>
       </div>
-      
+
       {/* Volunteer Statistics Section - Moved here */}
       <div className="bg-white rounded-xl shadow-md p-6 mb-8">
         <h2 className="text-xl font-semibold mb-4 text-gray-800 flex items-center">
           <FiBarChart2 className="mr-2 text-indigo-500" /> Volunteer Statistics
         </h2>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="bg-indigo-50 rounded-lg p-4 text-center">
             <h3 className="font-medium text-gray-700 mb-2">Total Hours</h3>
-            <p className="text-3xl font-bold text-indigo-600">{formData.totalHours}</p>
+            <p className="text-3xl font-bold text-indigo-600">
+              {formData.totalHours}
+            </p>
           </div>
-          
+
           <div className="bg-indigo-50 rounded-lg p-4 text-center">
             <h3 className="font-medium text-gray-700 mb-2">Experience Level</h3>
-            <p className="text-3xl font-bold text-indigo-600">{formData.experience}</p>
+            <p className="text-3xl font-bold text-indigo-600">
+              {formData.experience}
+            </p>
           </div>
-          
+
           <div className="bg-indigo-50 rounded-lg p-4 text-center">
-            <h3 className="font-medium text-gray-700 mb-2">Preferred Locations</h3>
-            <p className="text-3xl font-bold text-indigo-600">{formData.preferredLocations.length}</p>
+            <h3 className="font-medium text-gray-700 mb-2">
+              Preferred Locations
+            </h3>
+            <p className="text-3xl font-bold text-indigo-600">
+              {formData.preferredLocations.length}
+            </p>
           </div>
         </div>
       </div>
-      
+
       {/* Main Content */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Left Column - Contact Information */}
@@ -694,7 +764,7 @@ const VolunteerProfile = () => {
           <h2 className="text-xl font-semibold mb-4 text-gray-800 flex items-center">
             <FiUser className="mr-2 text-indigo-500" /> Contact Information
           </h2>
-          
+
           {editMode ? (
             <form className="space-y-4">
               <div>
@@ -709,7 +779,7 @@ const VolunteerProfile = () => {
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Email
@@ -721,9 +791,11 @@ const VolunteerProfile = () => {
                   disabled
                   className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100"
                 />
-                <p className="text-xs text-gray-500 mt-1">Email cannot be changed</p>
+                <p className="text-xs text-gray-500 mt-1">
+                  Email cannot be changed
+                </p>
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Phone
@@ -736,7 +808,7 @@ const VolunteerProfile = () => {
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Address
@@ -749,7 +821,7 @@ const VolunteerProfile = () => {
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
-              
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -763,7 +835,7 @@ const VolunteerProfile = () => {
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     State
@@ -777,7 +849,7 @@ const VolunteerProfile = () => {
                   />
                 </div>
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Zip Code
@@ -790,7 +862,7 @@ const VolunteerProfile = () => {
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Country
@@ -809,7 +881,7 @@ const VolunteerProfile = () => {
                   <option value="Other">Other</option>
                 </select>
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Birthdate
@@ -829,39 +901,52 @@ const VolunteerProfile = () => {
                 <FiMail className="text-gray-400 mt-1 mr-3" />
                 <div>
                   <p className="text-sm text-gray-500">Email</p>
-                  <p className="text-gray-700">{formData.email || "Not provided"}</p>
+                  <p className="text-gray-700">
+                    {formData.email || "Not provided"}
+                  </p>
                 </div>
               </div>
-              
+
               <div className="flex items-start">
                 <FiPhone className="text-gray-400 mt-1 mr-3" />
                 <div>
                   <p className="text-sm text-gray-500">Phone</p>
-                  <p className="text-gray-700">{formData.phone || "Not provided"}</p>
+                  <p className="text-gray-700">
+                    {formData.phone || "Not provided"}
+                  </p>
                 </div>
               </div>
-              
+
               <div className="flex items-start">
                 <FiMapPin className="text-gray-400 mt-1 mr-3" />
                 <div>
                   <p className="text-sm text-gray-500">Address</p>
                   <p className="text-gray-700">
-                    {formData.address || formData.city || formData.state || formData.zipCode || formData.country ? (
+                    {formData.address ||
+                    formData.city ||
+                    formData.state ||
+                    formData.zipCode ||
+                    formData.country ? (
                       <>
                         {formData.address || ""}
-                        {(formData.city || formData.state || formData.zipCode) && (
+                        {(formData.city ||
+                          formData.state ||
+                          formData.zipCode) && (
                           <>
                             {formData.address && <br />}
                             {[
-                              formData.city || "", 
-                              formData.state || "", 
-                              formData.zipCode || ""
-                            ].filter(Boolean).join(", ")}
+                              formData.city || "",
+                              formData.state || "",
+                              formData.zipCode || "",
+                            ]
+                              .filter(Boolean)
+                              .join(", ")}
                           </>
                         )}
                         {formData.country && (
                           <>
-                            <br />{formData.country}
+                            <br />
+                            {formData.country}
                           </>
                         )}
                       </>
@@ -871,44 +956,54 @@ const VolunteerProfile = () => {
                   </p>
                 </div>
               </div>
-              
+
               <div className="flex items-start">
                 <FiCalendar className="text-gray-400 mt-1 mr-3" />
                 <div>
                   <p className="text-sm text-gray-500">Birthdate</p>
                   <p className="text-gray-700">
-                    {formData.birthdate ? new Date(formData.birthdate).toLocaleDateString() : "Not provided"}
+                    {formData.birthdate
+                      ? new Date(formData.birthdate).toLocaleDateString()
+                      : "Not provided"}
                   </p>
                 </div>
               </div>
             </div>
           )}
         </div>
-        
+
         {/* Middle Column - Skills & Expertise */}
         <div className="bg-white rounded-xl shadow-md p-6">
           <h2 className="text-xl font-semibold mb-4 text-gray-800 flex items-center">
             <FiAward className="mr-2 text-indigo-500" /> Skills & Expertise
           </h2>
-          
+
           {editMode ? (
             <div className="space-y-4">
               {/* Skill Dropdown */}
               <div className="relative">
                 <div className="flex items-center space-x-2">
-                  <div 
+                  <div
                     className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer flex justify-between items-center"
                     onClick={() => {
                       setSkillDropdownOpen(!skillDropdownOpen);
                       setShowCustomSkillInput(false);
                     }}
                   >
-                    <span className={selectedSkill ? "text-gray-800" : "text-gray-400"}>
+                    <span
+                      className={
+                        selectedSkill ? "text-gray-800" : "text-gray-400"
+                      }
+                    >
                       {selectedSkill || "Select a skill"}
                     </span>
-                    <FiChevronDown className={`transition ${skillDropdownOpen ? "transform rotate-180" : ""}`} />
+                    <FiChevronDown
+                      className={`transition ${
+                        skillDropdownOpen ? "transform rotate-180" : ""
+                      }`}
+                    />
                   </div>
-                  
+
                   <button
                     onClick={() => {
                       if (selectedSkill) {
@@ -922,7 +1017,7 @@ const VolunteerProfile = () => {
                     <FiPlus />
                   </button>
                 </div>
-                
+
                 {/* Dropdown Menu */}
                 {skillDropdownOpen && (
                   <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
@@ -935,25 +1030,24 @@ const VolunteerProfile = () => {
                         onChange={(e) => setSelectedSkill(e.target.value)}
                       />
                     </div>
-                    
+
                     <div className="py-1">
-                      {COMMON_SKILLS
-                        .filter(skill => 
-                          skill.toLowerCase().includes(selectedSkill.toLowerCase())
-                        )
-                        .map((skill, idx) => (
-                          <div
-                            key={idx}
-                            className="px-4 py-2 text-gray-700 hover:bg-indigo-50 cursor-pointer"
-                            onClick={() => handleSelectSkill(skill)}
-                          >
-                            {skill}
-                          </div>
-                        ))
-                      }
-                      
+                      {COMMON_SKILLS.filter((skill) =>
+                        skill
+                          .toLowerCase()
+                          .includes(selectedSkill.toLowerCase())
+                      ).map((skill, idx) => (
+                        <div
+                          key={idx}
+                          className="px-4 py-2 text-gray-700 hover:bg-indigo-50 cursor-pointer"
+                          onClick={() => handleSelectSkill(skill)}
+                        >
+                          {skill}
+                        </div>
+                      ))}
+
                       {/* Custom skill option */}
-                      <div 
+                      <div
                         className="px-4 py-2 text-indigo-600 hover:bg-indigo-50 cursor-pointer border-t border-gray-200"
                         onClick={() => {
                           setShowCustomSkillInput(true);
@@ -966,7 +1060,7 @@ const VolunteerProfile = () => {
                   </div>
                 )}
               </div>
-              
+
               {/* Custom Skill Input */}
               {showCustomSkillInput && (
                 <div className="flex items-center space-x-2">
@@ -977,7 +1071,7 @@ const VolunteerProfile = () => {
                     placeholder="Enter a custom skill"
                     className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     onKeyPress={(e) => {
-                      if (e.key === 'Enter') {
+                      if (e.key === "Enter") {
                         e.preventDefault();
                         handleAddCustomSkill();
                       }
@@ -991,10 +1085,13 @@ const VolunteerProfile = () => {
                   </button>
                 </div>
               )}
-              
+
               <div className="space-y-2">
                 {formData.skills.map((skill, index) => (
-                  <div key={index} className="flex items-center justify-between bg-gray-50 p-2 rounded-md">
+                  <div
+                    key={index}
+                    className="flex items-center justify-between bg-gray-50 p-2 rounded-md"
+                  >
                     <span>{skill}</span>
                     <button
                       onClick={() => handleRemoveSkill(index)}
@@ -1004,9 +1101,11 @@ const VolunteerProfile = () => {
                     </button>
                   </div>
                 ))}
-                
+
                 {formData.skills.length === 0 && (
-                  <p className="text-gray-500 text-sm italic">No skills added yet</p>
+                  <p className="text-gray-500 text-sm italic">
+                    No skills added yet
+                  </p>
                 )}
               </div>
             </div>
@@ -1021,36 +1120,46 @@ const VolunteerProfile = () => {
                   </div>
                 ))
               ) : (
-                <p className="text-gray-500 text-sm italic">No skills added yet</p>
+                <p className="text-gray-500 text-sm italic">
+                  No skills added yet
+                </p>
               )}
             </div>
           )}
         </div>
-        
+
         {/* Right Column - Interests */}
         <div className="bg-white rounded-xl shadow-md p-6">
           <h2 className="text-xl font-semibold mb-4 text-gray-800 flex items-center">
             <FiHeart className="mr-2 text-indigo-500" /> Interests
           </h2>
-          
+
           {editMode ? (
             <div className="space-y-4">
               {/* Interest Dropdown */}
               <div className="relative">
                 <div className="flex items-center space-x-2">
-                  <div 
+                  <div
                     className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer flex justify-between items-center"
                     onClick={() => {
                       setInterestDropdownOpen(!interestDropdownOpen);
                       setShowCustomInterestInput(false);
                     }}
                   >
-                    <span className={selectedInterest ? "text-gray-800" : "text-gray-400"}>
+                    <span
+                      className={
+                        selectedInterest ? "text-gray-800" : "text-gray-400"
+                      }
+                    >
                       {selectedInterest || "Select an interest"}
                     </span>
-                    <FiChevronDown className={`transition ${interestDropdownOpen ? "transform rotate-180" : ""}`} />
+                    <FiChevronDown
+                      className={`transition ${
+                        interestDropdownOpen ? "transform rotate-180" : ""
+                      }`}
+                    />
                   </div>
-                  
+
                   <button
                     onClick={() => {
                       if (selectedInterest) {
@@ -1064,7 +1173,7 @@ const VolunteerProfile = () => {
                     <FiPlus />
                   </button>
                 </div>
-                
+
                 {/* Dropdown Menu */}
                 {interestDropdownOpen && (
                   <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
@@ -1077,25 +1186,24 @@ const VolunteerProfile = () => {
                         onChange={(e) => setSelectedInterest(e.target.value)}
                       />
                     </div>
-                    
+
                     <div className="py-1">
-                      {COMMON_INTERESTS
-                        .filter(interest => 
-                          interest.toLowerCase().includes(selectedInterest.toLowerCase())
-                        )
-                        .map((interest, idx) => (
-                          <div
-                            key={idx}
-                            className="px-4 py-2 text-gray-700 hover:bg-indigo-50 cursor-pointer"
-                            onClick={() => handleSelectInterest(interest)}
-                          >
-                            {interest}
-                          </div>
-                        ))
-                      }
-                      
+                      {COMMON_INTERESTS.filter((interest) =>
+                        interest
+                          .toLowerCase()
+                          .includes(selectedInterest.toLowerCase())
+                      ).map((interest, idx) => (
+                        <div
+                          key={idx}
+                          className="px-4 py-2 text-gray-700 hover:bg-indigo-50 cursor-pointer"
+                          onClick={() => handleSelectInterest(interest)}
+                        >
+                          {interest}
+                        </div>
+                      ))}
+
                       {/* Custom interest option */}
-                      <div 
+                      <div
                         className="px-4 py-2 text-indigo-600 hover:bg-indigo-50 cursor-pointer border-t border-gray-200"
                         onClick={() => {
                           setShowCustomInterestInput(true);
@@ -1108,7 +1216,7 @@ const VolunteerProfile = () => {
                   </div>
                 )}
               </div>
-              
+
               {/* Custom Interest Input */}
               {showCustomInterestInput && (
                 <div className="flex items-center space-x-2">
@@ -1119,7 +1227,7 @@ const VolunteerProfile = () => {
                     placeholder="Enter a custom interest"
                     className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     onKeyPress={(e) => {
-                      if (e.key === 'Enter') {
+                      if (e.key === "Enter") {
                         e.preventDefault();
                         handleAddCustomInterest();
                       }
@@ -1133,10 +1241,13 @@ const VolunteerProfile = () => {
                   </button>
                 </div>
               )}
-              
+
               <div className="space-y-2">
                 {formData.interests.map((interest, index) => (
-                  <div key={index} className="flex items-center justify-between bg-gray-50 p-2 rounded-md">
+                  <div
+                    key={index}
+                    className="flex items-center justify-between bg-gray-50 p-2 rounded-md"
+                  >
                     <span>{interest}</span>
                     <button
                       onClick={() => handleRemoveInterest(index)}
@@ -1146,9 +1257,11 @@ const VolunteerProfile = () => {
                     </button>
                   </div>
                 ))}
-                
+
                 {formData.interests.length === 0 && (
-                  <p className="text-gray-500 text-sm italic">No interests added yet</p>
+                  <p className="text-gray-500 text-sm italic">
+                    No interests added yet
+                  </p>
                 )}
               </div>
             </div>
@@ -1157,7 +1270,7 @@ const VolunteerProfile = () => {
               {formData.interests && formData.interests.length > 0 ? (
                 <div className="flex flex-wrap gap-2">
                   {formData.interests.map((interest, index) => (
-                    <span 
+                    <span
                       key={index}
                       className="bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-sm"
                     >
@@ -1166,19 +1279,22 @@ const VolunteerProfile = () => {
                   ))}
                 </div>
               ) : (
-                <p className="text-gray-500 text-sm italic">No interests added yet</p>
+                <p className="text-gray-500 text-sm italic">
+                  No interests added yet
+                </p>
               )}
             </div>
           )}
         </div>
       </div>
-      
+
       {/* Preferred Locations Section */}
       <div className="mt-8 bg-white rounded-xl shadow-md p-6">
         <h2 className="text-xl font-semibold mb-4 text-gray-800 flex items-center">
-          <FiMapPin className="mr-2 text-indigo-500" /> Preferred Volunteer Locations
+          <FiMapPin className="mr-2 text-indigo-500" /> Preferred Volunteer
+          Locations
         </h2>
-        
+
         {editMode ? (
           <div className="space-y-4">
             <div className="flex items-center space-x-2">
@@ -1197,22 +1313,22 @@ const VolunteerProfile = () => {
                 <FiPlus />
               </button>
             </div>
-            
+
             {/* Suggested Common Locations */}
             <div className="mt-4">
               <p className="text-sm text-gray-600 mb-2">Suggested locations:</p>
               <div className="flex flex-wrap gap-2">
                 {[
-                  'Downtown',
-                  'City Parks',
-                  'Schools',
-                  'Community Centers',
-                  'Soup Kitchens',
-                  'Shelters',
-                  'Hospitals',
-                  'Retirement Homes',
-                  'Libraries'
-                ].map(location => (
+                  "Downtown",
+                  "City Parks",
+                  "Schools",
+                  "Community Centers",
+                  "Soup Kitchens",
+                  "Shelters",
+                  "Hospitals",
+                  "Retirement Homes",
+                  "Libraries",
+                ].map((location) => (
                   <button
                     key={location}
                     type="button"
@@ -1220,10 +1336,15 @@ const VolunteerProfile = () => {
                       if (!formData.preferredLocations.includes(location)) {
                         setFormData({
                           ...formData,
-                          preferredLocations: [...formData.preferredLocations, location]
+                          preferredLocations: [
+                            ...formData.preferredLocations,
+                            location,
+                          ],
                         });
                       } else {
-                        toast.info("This location is already in your preferences");
+                        toast.info(
+                          "This location is already in your preferences"
+                        );
                       }
                     }}
                     className="px-3 py-1 text-xs bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-full"
@@ -1233,10 +1354,13 @@ const VolunteerProfile = () => {
                 ))}
               </div>
             </div>
-            
+
             <div className="space-y-2">
               {formData.preferredLocations.map((location, index) => (
-                <div key={index} className="flex items-center justify-between bg-gray-50 p-2 rounded-md">
+                <div
+                  key={index}
+                  className="flex items-center justify-between bg-gray-50 p-2 rounded-md"
+                >
                   <span>{location}</span>
                   <button
                     onClick={() => handleRemoveLocation(index)}
@@ -1246,18 +1370,21 @@ const VolunteerProfile = () => {
                   </button>
                 </div>
               ))}
-              
+
               {formData.preferredLocations.length === 0 && (
-                <p className="text-gray-500 text-sm italic">No preferred locations added yet</p>
+                <p className="text-gray-500 text-sm italic">
+                  No preferred locations added yet
+                </p>
               )}
             </div>
           </div>
         ) : (
           <div>
-            {formData.preferredLocations && formData.preferredLocations.length > 0 ? (
+            {formData.preferredLocations &&
+            formData.preferredLocations.length > 0 ? (
               <div className="flex flex-wrap gap-2">
                 {formData.preferredLocations.map((location, index) => (
-                  <span 
+                  <span
                     key={index}
                     className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm flex items-center"
                   >
@@ -1266,64 +1393,93 @@ const VolunteerProfile = () => {
                 ))}
               </div>
             ) : (
-              <p className="text-gray-500 text-sm italic">No preferred locations added yet</p>
+              <p className="text-gray-500 text-sm italic">
+                No preferred locations added yet
+              </p>
             )}
           </div>
         )}
       </div>
-      
+
       {/* Availability Schedule Section */}
       <div className="mt-8 bg-white rounded-xl shadow-md p-6">
         <h2 className="text-xl font-semibold mb-4 text-gray-800 flex items-center">
           <FiClock className="mr-2 text-indigo-500" /> Availability Schedule
         </h2>
-        
+
         {editMode ? (
           <div className="space-y-6">
-            <p className="text-sm text-gray-500 mb-4">Select the times you're available to volunteer each day</p>
-            
+            <p className="text-sm text-gray-500 mb-4">
+              Select the times you're available to volunteer each day
+            </p>
+
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map((day) => (
-                <div key={day} className="bg-gray-50 rounded-lg p-4 hover:shadow-sm transition-shadow">
-                  <h3 className="capitalize font-medium text-gray-700 mb-3 pb-2">{day}</h3>
+              {[
+                "monday",
+                "tuesday",
+                "wednesday",
+                "thursday",
+                "friday",
+                "saturday",
+                "sunday",
+              ].map((day) => (
+                <div
+                  key={day}
+                  className="bg-gray-50 rounded-lg p-4 hover:shadow-sm transition-shadow"
+                >
+                  <h3 className="capitalize font-medium text-gray-700 mb-3 pb-2">
+                    {day}
+                  </h3>
                   <div className="space-y-2">
-                    {['morning', 'afternoon', 'evening'].map((timeSlot) => (
-                      <label 
-                        key={`${day}-${timeSlot}`} 
+                    {["morning", "afternoon", "evening"].map((timeSlot) => (
+                      <label
+                        key={`${day}-${timeSlot}`}
                         className={`flex items-center p-2 rounded-md cursor-pointer transition-colors ${
-                          formData.availability[day]?.includes(timeSlot) 
-                            ? 'bg-indigo-100 text-indigo-700' 
-                            : 'hover:bg-gray-100'
+                          formData.availability[day]?.includes(timeSlot)
+                            ? "bg-indigo-100 text-indigo-700"
+                            : "hover:bg-gray-100"
                         }`}
                       >
                         <input
                           type="checkbox"
-                          checked={formData.availability[day]?.includes(timeSlot) || false}
+                          checked={
+                            formData.availability[day]?.includes(timeSlot) ||
+                            false
+                          }
                           onChange={(e) => {
-                            const currentSlots = formData.availability[day] || [];
+                            const currentSlots =
+                              formData.availability[day] || [];
                             let newSlots;
-                            
+
                             if (e.target.checked) {
                               newSlots = [...currentSlots, timeSlot];
                             } else {
-                              newSlots = currentSlots.filter(slot => slot !== timeSlot);
+                              newSlots = currentSlots.filter(
+                                (slot) => slot !== timeSlot
+                              );
                             }
-                            
+
                             setFormData({
                               ...formData,
                               availability: {
                                 ...formData.availability,
-                                [day]: newSlots
-                              }
+                                [day]: newSlots,
+                              },
                             });
                           }}
                           className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
                         />
                         <div className="ml-3 flex items-center">
-                          <span className={`text-sm ${formData.availability[day]?.includes(timeSlot) ? 'font-medium' : ''}`}>
-                            {timeSlot === 'morning' && '🌅 '}
-                            {timeSlot === 'afternoon' && '☀️ '}
-                            {timeSlot === 'evening' && '🌙 '}
+                          <span
+                            className={`text-sm ${
+                              formData.availability[day]?.includes(timeSlot)
+                                ? "font-medium"
+                                : ""
+                            }`}
+                          >
+                            {timeSlot === "morning" && "🌅 "}
+                            {timeSlot === "afternoon" && "☀️ "}
+                            {timeSlot === "evening" && "🌙 "}
                             <span className="capitalize">{timeSlot}</span>
                           </span>
                         </div>
@@ -1333,41 +1489,47 @@ const VolunteerProfile = () => {
                 </div>
               ))}
             </div>
-            
+
             <div className="flex flex-wrap justify-center mt-4 gap-2">
-              <button 
+              <button
                 type="button"
                 onClick={() => {
                   // Quick select all weekday mornings
-                  const newAvailability = {...formData.availability};
-                  ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'].forEach(day => {
-                    newAvailability[day] = ['morning'];
+                  const newAvailability = { ...formData.availability };
+                  [
+                    "monday",
+                    "tuesday",
+                    "wednesday",
+                    "thursday",
+                    "friday",
+                  ].forEach((day) => {
+                    newAvailability[day] = ["morning"];
                   });
-                  setFormData({...formData, availability: newAvailability});
+                  setFormData({ ...formData, availability: newAvailability });
                 }}
                 className="text-xs bg-indigo-50 text-indigo-600 hover:bg-indigo-100 px-3 py-1 rounded-md"
               >
                 Weekday Mornings
               </button>
-              <button 
+              <button
                 type="button"
                 onClick={() => {
                   // Quick select all weekend days
-                  const newAvailability = {...formData.availability};
-                  ['saturday', 'sunday'].forEach(day => {
-                    newAvailability[day] = ['morning', 'afternoon', 'evening'];
+                  const newAvailability = { ...formData.availability };
+                  ["saturday", "sunday"].forEach((day) => {
+                    newAvailability[day] = ["morning", "afternoon", "evening"];
                   });
-                  setFormData({...formData, availability: newAvailability});
+                  setFormData({ ...formData, availability: newAvailability });
                 }}
                 className="text-xs bg-indigo-50 text-indigo-600 hover:bg-indigo-100 px-3 py-1 rounded-md"
               >
                 All Weekend
               </button>
-              <button 
+              <button
                 type="button"
                 onClick={() => {
                   // Clear all selections
-                  setFormData({...formData, availability: {}});
+                  setFormData({ ...formData, availability: {} });
                 }}
                 className="text-xs bg-red-50 text-red-600 hover:bg-red-100 px-3 py-1 rounded-md"
               >
@@ -1379,33 +1541,46 @@ const VolunteerProfile = () => {
           <div className="space-y-4">
             {Object.keys(formData.availability || {}).length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map((day) => (
-                  <div key={day} className={`rounded-lg p-4 transition-all ${
-                    formData.availability[day]?.length > 0 
-                      ? 'bg-gray-50' 
-                      : 'bg-gray-50 text-gray-400'
-                  }`}>
+                {[
+                  "monday",
+                  "tuesday",
+                  "wednesday",
+                  "thursday",
+                  "friday",
+                  "saturday",
+                  "sunday",
+                ].map((day) => (
+                  <div
+                    key={day}
+                    className={`rounded-lg p-4 transition-all ${
+                      formData.availability[day]?.length > 0
+                        ? "bg-gray-50"
+                        : "bg-gray-50 text-gray-400"
+                    }`}
+                  >
                     <h3 className="capitalize font-medium mb-2 flex items-center">
-                      {day === 'saturday' || day === 'sunday' ? '🔆 ' : '📅 '}
+                      {day === "saturday" || day === "sunday" ? "🔆 " : "📅 "}
                       {day}
                     </h3>
-                    
+
                     {formData.availability[day]?.length > 0 ? (
                       <div className="flex flex-wrap gap-2">
                         {formData.availability[day].map((timeSlot, index) => (
-                          <span 
+                          <span
                             key={index}
                             className="bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-xs capitalize flex items-center"
                           >
-                            {timeSlot === 'morning' && '🌅 '}
-                            {timeSlot === 'afternoon' && '☀️ '}
-                            {timeSlot === 'evening' && '🌙 '}
+                            {timeSlot === "morning" && "🌅 "}
+                            {timeSlot === "afternoon" && "☀️ "}
+                            {timeSlot === "evening" && "🌙 "}
                             {timeSlot}
                           </span>
                         ))}
                       </div>
                     ) : (
-                      <p className="text-gray-400 text-sm italic">Not available</p>
+                      <p className="text-gray-400 text-sm italic">
+                        Not available
+                      </p>
                     )}
                   </div>
                 ))}
@@ -1413,14 +1588,18 @@ const VolunteerProfile = () => {
             ) : (
               <div className="text-center py-8 bg-gray-50 rounded-lg">
                 <FiClock className="mx-auto h-10 w-10 text-gray-300 mb-2" />
-                <p className="text-gray-500">No availability schedule provided</p>
-                <p className="text-sm text-gray-400 mt-1">Click 'Edit Profile' to set your volunteer availability</p>
+                <p className="text-gray-500">
+                  No availability schedule provided
+                </p>
+                <p className="text-sm text-gray-400 mt-1">
+                  Click 'Edit Profile' to set your volunteer availability
+                </p>
               </div>
             )}
           </div>
         )}
       </div>
-      
+
       {/* Additional Volunteer Information Section */}
       <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-8">
         {/* Volunteer Details */}
@@ -1428,7 +1607,7 @@ const VolunteerProfile = () => {
           <h2 className="text-xl font-semibold mb-4 text-gray-800 flex items-center">
             <FiUser className="mr-2 text-indigo-500" /> Volunteer Details
           </h2>
-          
+
           {editMode ? (
             <form className="space-y-4">
               <div>
@@ -1443,7 +1622,7 @@ const VolunteerProfile = () => {
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Education
@@ -1456,7 +1635,7 @@ const VolunteerProfile = () => {
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Experience Level
@@ -1472,7 +1651,7 @@ const VolunteerProfile = () => {
                   <option value="Expert">Expert</option>
                 </select>
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Maximum Distance Willing to Travel (miles)
@@ -1487,56 +1666,81 @@ const VolunteerProfile = () => {
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
-              
+
               <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">Transportation</label>
-                
+                <label className="block text-sm font-medium text-gray-700">
+                  Transportation
+                </label>
+
                 <div className="flex items-center">
                   <input
                     id="hasDriverLicense"
                     type="checkbox"
                     name="hasDriverLicense"
                     checked={formData.hasDriverLicense}
-                    onChange={(e) => setFormData({...formData, hasDriverLicense: e.target.checked})}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        hasDriverLicense: e.target.checked,
+                      })
+                    }
                     className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
                   />
-                  <label htmlFor="hasDriverLicense" className="ml-2 block text-sm text-gray-700">
+                  <label
+                    htmlFor="hasDriverLicense"
+                    className="ml-2 block text-sm text-gray-700"
+                  >
                     I have a driver's license
                   </label>
                 </div>
-                
+
                 <div className="flex items-center">
                   <input
                     id="hasVehicle"
                     type="checkbox"
                     name="hasVehicle"
                     checked={formData.hasVehicle}
-                    onChange={(e) => setFormData({...formData, hasVehicle: e.target.checked})}
+                    onChange={(e) =>
+                      setFormData({ ...formData, hasVehicle: e.target.checked })
+                    }
                     className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
                   />
-                  <label htmlFor="hasVehicle" className="ml-2 block text-sm text-gray-700">
+                  <label
+                    htmlFor="hasVehicle"
+                    className="ml-2 block text-sm text-gray-700"
+                  >
                     I have my own vehicle
                   </label>
                 </div>
               </div>
-              
+
               <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">Background Check</label>
-                
+                <label className="block text-sm font-medium text-gray-700">
+                  Background Check
+                </label>
+
                 <div className="flex items-center">
                   <input
                     id="hasCriminalRecord"
                     type="checkbox"
                     name="hasCriminalRecord"
                     checked={formData.hasCriminalRecord}
-                    onChange={(e) => setFormData({...formData, hasCriminalRecord: e.target.checked})}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        hasCriminalRecord: e.target.checked,
+                      })
+                    }
                     className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
                   />
-                  <label htmlFor="hasCriminalRecord" className="ml-2 block text-sm text-gray-700">
+                  <label
+                    htmlFor="hasCriminalRecord"
+                    className="ml-2 block text-sm text-gray-700"
+                  >
                     I have a criminal record
                   </label>
                 </div>
-                
+
                 {formData.hasCriminalRecord && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mt-2 mb-1">
@@ -1558,67 +1762,92 @@ const VolunteerProfile = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm text-gray-500">Occupation</p>
-                  <p className="text-gray-700">{formData.occupation || "Not provided"}</p>
+                  <p className="text-gray-700">
+                    {formData.occupation || "Not provided"}
+                  </p>
                 </div>
-                
+
                 <div>
                   <p className="text-sm text-gray-500">Education</p>
-                  <p className="text-gray-700">{formData.education || "Not provided"}</p>
+                  <p className="text-gray-700">
+                    {formData.education || "Not provided"}
+                  </p>
                 </div>
               </div>
-              
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm text-gray-500">Experience Level</p>
                   <p className="text-gray-700">{formData.experience}</p>
                 </div>
-                
+
                 <div>
                   <p className="text-sm text-gray-500">Max Travel Distance</p>
                   <p className="text-gray-700">{formData.maxDistance} miles</p>
                 </div>
               </div>
-              
+
               <div>
                 <p className="text-sm text-gray-500">Transportation</p>
                 <div className="mt-1 space-y-1">
                   <p className="text-gray-700 flex items-center">
-                    <span className={`mr-2 ${formData.hasDriverLicense ? "text-green-500" : "text-gray-400"}`}>
+                    <span
+                      className={`mr-2 ${
+                        formData.hasDriverLicense
+                          ? "text-green-500"
+                          : "text-gray-400"
+                      }`}
+                    >
                       {formData.hasDriverLicense ? "✓" : "✗"}
                     </span>
                     Driver's License
                   </p>
                   <p className="text-gray-700 flex items-center">
-                    <span className={`mr-2 ${formData.hasVehicle ? "text-green-500" : "text-gray-400"}`}>
+                    <span
+                      className={`mr-2 ${
+                        formData.hasVehicle ? "text-green-500" : "text-gray-400"
+                      }`}
+                    >
                       {formData.hasVehicle ? "✓" : "✗"}
                     </span>
                     Own Vehicle
                   </p>
                 </div>
               </div>
-              
+
               <div>
                 <p className="text-sm text-gray-500">Background Check</p>
                 <p className="text-gray-700 flex items-center">
-                  <span className={`mr-2 ${!formData.hasCriminalRecord ? "text-green-500" : "text-red-500"}`}>
+                  <span
+                    className={`mr-2 ${
+                      !formData.hasCriminalRecord
+                        ? "text-green-500"
+                        : "text-red-500"
+                    }`}
+                  >
                     {!formData.hasCriminalRecord ? "✓" : "✗"}
                   </span>
-                  {formData.hasCriminalRecord ? "Has criminal record" : "No criminal record"}
+                  {formData.hasCriminalRecord
+                    ? "Has criminal record"
+                    : "No criminal record"}
                 </p>
-                {formData.hasCriminalRecord && formData.criminalRecordDetails && (
-                  <p className="text-gray-700 mt-1 text-sm italic">{formData.criminalRecordDetails}</p>
-                )}
+                {formData.hasCriminalRecord &&
+                  formData.criminalRecordDetails && (
+                    <p className="text-gray-700 mt-1 text-sm italic">
+                      {formData.criminalRecordDetails}
+                    </p>
+                  )}
               </div>
             </div>
           )}
         </div>
-        
+
         {/* Emergency Contact */}
         <div className="bg-white rounded-xl shadow-md p-6">
           <h2 className="text-xl font-semibold mb-4 text-gray-800 flex items-center">
             <FiPhone className="mr-2 text-indigo-500" /> Emergency Contact
           </h2>
-          
+
           {editMode ? (
             <form className="space-y-4">
               <div>
@@ -1629,17 +1858,19 @@ const VolunteerProfile = () => {
                   type="text"
                   name="emergencyContactName"
                   value={formData.emergencyContact.name}
-                  onChange={(e) => setFormData({
-                    ...formData, 
-                    emergencyContact: {
-                      ...formData.emergencyContact,
-                      name: e.target.value
-                    }
-                  })}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      emergencyContact: {
+                        ...formData.emergencyContact,
+                        name: e.target.value,
+                      },
+                    })
+                  }
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Relationship
@@ -1648,17 +1879,19 @@ const VolunteerProfile = () => {
                   type="text"
                   name="emergencyContactRelationship"
                   value={formData.emergencyContact.relationship}
-                  onChange={(e) => setFormData({
-                    ...formData, 
-                    emergencyContact: {
-                      ...formData.emergencyContact,
-                      relationship: e.target.value
-                    }
-                  })}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      emergencyContact: {
+                        ...formData.emergencyContact,
+                        relationship: e.target.value,
+                      },
+                    })
+                  }
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Phone Number
@@ -1667,51 +1900,62 @@ const VolunteerProfile = () => {
                   type="tel"
                   name="emergencyContactPhone"
                   value={formData.emergencyContact.phone}
-                  onChange={(e) => setFormData({
-                    ...formData, 
-                    emergencyContact: {
-                      ...formData.emergencyContact,
-                      phone: e.target.value
-                    }
-                  })}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      emergencyContact: {
+                        ...formData.emergencyContact,
+                        phone: e.target.value,
+                      },
+                    })
+                  }
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
             </form>
           ) : (
             <div className="space-y-4">
-              {formData.emergencyContact.name || formData.emergencyContact.phone ? (
+              {formData.emergencyContact.name ||
+              formData.emergencyContact.phone ? (
                 <>
                   <div>
                     <p className="text-sm text-gray-500">Contact Name</p>
-                    <p className="text-gray-700">{formData.emergencyContact.name || "Not provided"}</p>
+                    <p className="text-gray-700">
+                      {formData.emergencyContact.name || "Not provided"}
+                    </p>
                   </div>
-                  
+
                   <div>
                     <p className="text-sm text-gray-500">Relationship</p>
-                    <p className="text-gray-700">{formData.emergencyContact.relationship || "Not provided"}</p>
+                    <p className="text-gray-700">
+                      {formData.emergencyContact.relationship || "Not provided"}
+                    </p>
                   </div>
-                  
+
                   <div>
                     <p className="text-sm text-gray-500">Phone Number</p>
-                    <p className="text-gray-700">{formData.emergencyContact.phone || "Not provided"}</p>
+                    <p className="text-gray-700">
+                      {formData.emergencyContact.phone || "Not provided"}
+                    </p>
                   </div>
                 </>
               ) : (
-                <p className="text-gray-500 text-sm italic">No emergency contact information provided</p>
+                <p className="text-gray-500 text-sm italic">
+                  No emergency contact information provided
+                </p>
               )}
             </div>
           )}
         </div>
       </div>
-      
+
       {/* Additional Notes Section when in edit mode */}
       {editMode && (
         <div className="mt-8 bg-white rounded-xl shadow-md p-6">
           <h2 className="text-xl font-semibold mb-4 text-gray-800 flex items-center">
             <FiStar className="mr-2 text-indigo-500" /> Additional Information
           </h2>
-          
+
           <textarea
             name="additionalInfo"
             value={formData.additionalInfo}
@@ -1722,14 +1966,14 @@ const VolunteerProfile = () => {
           ></textarea>
         </div>
       )}
-      
+
       {/* Bio Section when in edit mode */}
       {editMode && (
         <div className="mt-8 bg-white rounded-xl shadow-md p-6">
           <h2 className="text-xl font-semibold mb-4 text-gray-800 flex items-center">
             <FiStar className="mr-2 text-indigo-500" /> Bio & Personal Statement
           </h2>
-          
+
           <textarea
             name="bio"
             value={formData.bio}
@@ -1744,4 +1988,4 @@ const VolunteerProfile = () => {
   );
 };
 
-export default VolunteerProfile; 
+export default VolunteerProfile;
