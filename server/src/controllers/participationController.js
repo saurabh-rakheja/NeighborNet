@@ -500,3 +500,89 @@ exports.getAllParticipations = async (req, res) => {
     });
   }
 }; 
+
+// @desc    Withdraw from an event participation
+// @route   PUT /api/participation/:id/withdraw
+// @access  Private (volunteer)
+exports.withdrawFromParticipation = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const volunteerId = req.user.id;
+    const { reason } = req.body;
+
+    // Check if volunteer role
+    if (req.user.role !== "volunteer") {
+      return res.status(403).json({
+        success: false,
+        message: "Only volunteers can withdraw from their participations",
+      });
+    }
+
+    // Find the participation record
+    const participation = await Participation.findById(id);
+    if (!participation) {
+      return res.status(404).json({
+        success: false,
+        message: "Participation not found",
+      });
+    }
+
+    // Check if the participation belongs to the user
+    if (participation.volunteerId.toString() !== volunteerId) {
+      return res.status(403).json({
+        success: false,
+        message: "Not authorized to withdraw from this participation",
+      });
+    }
+
+    // Get the event to check if it has already started
+    const event = await Event.findById(participation.eventId);
+    if (!event) {
+      return res.status(404).json({
+        success: false,
+        message: "Event not found",
+      });
+    }
+
+    // Check if event has already started
+    const now = new Date();
+    const eventStartDate = new Date(event.startDate);
+    if (now >= eventStartDate) {
+      return res.status(400).json({
+        success: false,
+        message: "Cannot withdraw from an event that has already started",
+      });
+    }
+
+    // Update participation status to withdrawn
+    participation.status = "Cancelled";
+    if (reason) {
+      participation.feedback = reason;
+    }
+    await participation.save();
+
+    // Decrement event volunteers count
+    await Event.findByIdAndUpdate(participation.eventId, {
+      $inc: { volunteersRegistered: -1 },
+    });
+
+    // If shift exists, remove volunteer from shift
+    if (participation.shiftId) {
+      await Shift.findByIdAndUpdate(participation.shiftId, {
+        $pull: { volunteers: { volunteerId } },
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Successfully withdrawn from the event",
+      data: participation,
+    });
+  } catch (error) {
+    console.error("Error in withdrawFromParticipation:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Server error",
+    });
+  }
+};

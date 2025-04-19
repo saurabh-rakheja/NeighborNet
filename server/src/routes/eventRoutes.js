@@ -5,7 +5,6 @@ const eventController = require("../controllers/eventController");
 const EventApplication = require("../models/eventApplicationSchema");
 const Event = require("../models/eventSchema");
 const Participation = require("../models/participationSchema");
-const Shift = require("../models/shiftSchema");
 
 // Create a router for public endpoints
 const publicRouter = express.Router();

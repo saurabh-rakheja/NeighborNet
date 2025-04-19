@@ -25,6 +25,11 @@ router.delete(
   authorizeCapabilities("volunteer"),
   participationController.cancelRegistration
 );
+router.put(
+  "/:id/withdraw",
+  authorizeCapabilities("volunteer"),
+  participationController.withdrawFromParticipation
+);
 
 // NGO routes - accessible to anyone with NGO capabilities
 router.get(

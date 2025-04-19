@@ -19,12 +19,15 @@ import { volunteerApi } from "../../../../services/volunteerApi";
 
 const MyApplications = () => {
   const [applications, setApplications] = useState([]);
+  const [registeredEvents, setRegisteredEvents] = useState([]);
   const [filteredApplications, setFilteredApplications] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [eventsLoading, setEventsLoading] = useState(true);
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [withdrawing, setWithdrawing] = useState(false);
   const [withdrawingId, setWithdrawingId] = useState(null);
+  const [activeTab, setActiveTab] = useState("applications");
 
   // Fetch applications
   useEffect(() => {
@@ -50,6 +53,35 @@ const MyApplications = () => {
     };
 
     fetchApplications();
+  }, []);
+
+  // Fetch registered events (participations)
+  useEffect(() => {
+    const fetchRegisteredEvents = async () => {
+      try {
+        setEventsLoading(true);
+        console.log("Fetching volunteer registrations...");
+        const response = await volunteerApi.getVolunteerRegistrations();
+        console.log("Registration response:", response);
+
+        if (response.success) {
+          console.log("Successfully fetched registrations:", response.data);
+          setRegisteredEvents(response.data || []);
+        } else {
+          console.error("Failed response from API:", response);
+          toast.error("Failed to fetch registered events");
+        }
+      } catch (error) {
+        console.error("Error fetching registered events:", error);
+        toast.error(
+          error.message || "An error occurred while fetching registered events"
+        );
+      } finally {
+        setEventsLoading(false);
+      }
+    };
+
+    fetchRegisteredEvents();
   }, []);
 
   // Handle filter change
@@ -146,6 +178,56 @@ const MyApplications = () => {
     }
   };
 
+  // Withdraw from registered event
+  const handleWithdrawFromEvent = async (participationId) => {
+    try {
+      setWithdrawing(true);
+      setWithdrawingId(participationId);
+
+      const result = await Swal.fire({
+        title: "Withdraw from Event",
+        text: "Are you sure you want to withdraw from this event? This action cannot be undone.",
+        icon: "warning",
+        input: "textarea",
+        inputLabel: "Reason (optional)",
+        inputPlaceholder: "Enter reason for withdrawal...",
+        showCancelButton: true,
+        confirmButtonText: "Withdraw",
+        cancelButtonText: "Cancel",
+        confirmButtonColor: "#f97316",
+      });
+
+      if (result.isConfirmed) {
+        const response = await volunteerApi.withdrawFromParticipation(
+          participationId,
+          result.value
+        );
+
+        if (response.success) {
+          // Update the registered events in state
+          const updatedEvents = registeredEvents.map((event) =>
+            event._id === participationId
+              ? { ...event, status: "Cancelled" }
+              : event
+          );
+          setRegisteredEvents(updatedEvents);
+
+          toast.success("Successfully withdrawn from the event");
+        } else {
+          throw new Error(response.message || "Failed to withdraw from event");
+        }
+      }
+    } catch (error) {
+      console.error("Error withdrawing from event:", error);
+      toast.error(
+        error.message || "An error occurred while withdrawing from event"
+      );
+    } finally {
+      setWithdrawing(false);
+      setWithdrawingId(null);
+    }
+  };
+
   // Status badge component
   const StatusBadge = ({ status }) => {
     switch (status) {
@@ -193,6 +275,40 @@ const MyApplications = () => {
     }
   };
 
+  // Add a debug utility to test different endpoints directly
+  const testDirectApiCall = async (endpoint) => {
+    try {
+      console.log(`Testing direct API call to: ${endpoint}`);
+
+      // Get the authentication token
+      const token = localStorage.getItem("auth-token");
+      if (!token) {
+        console.error("No auth token found");
+        return;
+      }
+
+      // Make a direct fetch request to the API
+      const response = await fetch(
+        `${
+          import.meta.env.VITE_API_URL || "http://localhost:5000/api"
+        }${endpoint}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      const data = await response.json();
+      console.log(`Response from ${endpoint}:`, data);
+
+      return data;
+    } catch (error) {
+      console.error(`Error calling ${endpoint}:`, error);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -202,18 +318,35 @@ const MyApplications = () => {
   }
 
   return (
-    <div className="max-w-6xl mx-auto pb-12">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-800">
-            My Applications
-          </h1>
-          <p className="text-gray-600 mt-1">
-            Manage your volunteer event applications
-          </p>
-        </div>
+    <div className="max-w-6xl mx-auto px-4 py-6">
+      <h1 className="text-2xl font-bold mb-6">My Volunteer Activities</h1>
+
+      {/* Tabs */}
+      <div className="flex border-b border-gray-200 mb-6">
+        <button
+          className={`py-2 px-4 font-medium ${
+            activeTab === "applications"
+              ? "text-blue-600 border-b-2 border-blue-600"
+              : "text-gray-600 hover:text-blue-600"
+          }`}
+          onClick={() => setActiveTab("applications")}
+        >
+          Applications
+        </button>
+        <button
+          className={`py-2 px-4 font-medium ${
+            activeTab === "registered"
+              ? "text-blue-600 border-b-2 border-blue-600"
+              : "text-gray-600 hover:text-blue-600"
+          }`}
+          onClick={() => setActiveTab("registered")}
+        >
+          Registered Events
+        </button>
       </div>
 
+      {activeTab === "applications" && (
+        <>
       {/* Filters */}
       <div className="bg-white rounded-lg shadow-sm p-4 mb-8">
         <div className="flex flex-col md:flex-row md:items-center space-y-4 md:space-y-0 md:space-x-4">
@@ -304,8 +437,12 @@ const MyApplications = () => {
                     <div className="space-y-2 text-sm text-gray-700 mt-4 mb-4">
                       {/* Application date */}
                       <div className="flex items-center">
-                        <span className="font-medium mr-2">Applied On:</span>
-                        <span>{formatDate(application.applicationDate)}</span>
+                            <span className="font-medium mr-2">
+                              Applied On:
+                            </span>
+                            <span>
+                              {formatDate(application.applicationDate)}
+                            </span>
                       </div>
 
                       {/* Event date */}
@@ -372,7 +509,228 @@ const MyApplications = () => {
                             : "bg-orange-500 hover:bg-orange-600"
                         } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500`}
                       >
-                        {withdrawing && withdrawingId === application._id ? (
+                            {withdrawing &&
+                            withdrawingId === application._id ? (
+                              <>
+                                <span className="animate-spin mr-1.5 h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+                                Withdrawing...
+                              </>
+                            ) : (
+                              <>
+                                <FiSlash className="mr-1.5 h-4 w-4" />
+                                Withdraw
+                              </>
+                            )}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      {activeTab === "registered" && (
+        <>
+          <h2 className="text-xl font-semibold mb-4">My Registered Events</h2>
+
+          {/* Debug information */}
+          <div className="bg-yellow-100 p-4 rounded-lg mb-4">
+            <h3 className="font-bold text-yellow-800 mb-2">
+              Debug Information
+            </h3>
+            <p>
+              <strong>Events Loading:</strong> {eventsLoading ? "Yes" : "No"}
+            </p>
+            <p>
+              <strong>Registered Events Count:</strong>{" "}
+              {registeredEvents ? registeredEvents.length : "undefined"}
+            </p>
+            <p>
+              <strong>API Endpoint:</strong> /participations/volunteer
+            </p>
+
+            <div className="flex flex-wrap gap-2 mt-2">
+              <button
+                onClick={() => {
+                  console.log("Manual refresh");
+                  const fetchDebug = async () => {
+                    try {
+                      setEventsLoading(true);
+                      console.log(
+                        "Manually fetching volunteer registrations..."
+                      );
+                      const response =
+                        await volunteerApi.getVolunteerRegistrations();
+                      console.log("Debug response:", response);
+
+                      if (response.success) {
+                        setRegisteredEvents(response.data || []);
+                      } else {
+                        toast.error("Failed to fetch registered events");
+                      }
+                    } catch (error) {
+                      console.error("Debug error:", error);
+                      toast.error("Error fetching volunteer registrations");
+                    } finally {
+                      setEventsLoading(false);
+                    }
+                  };
+                  fetchDebug();
+                }}
+                className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+              >
+                Refresh Registrations
+              </button>
+
+              <button
+                onClick={() => testDirectApiCall("/participations/volunteer")}
+                className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+              >
+                Test API
+              </button>
+
+              <button
+                onClick={() => testDirectApiCall("/events/applications")}
+                className="bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600"
+              >
+                Test Applications
+              </button>
+
+              <button
+                onClick={() => testDirectApiCall("/volunteers/profile")}
+                className="bg-orange-500 text-white px-4 py-2 rounded hover:bg-orange-600"
+              >
+                Test Profile
+              </button>
+            </div>
+          </div>
+
+          {eventsLoading ? (
+            <div className="flex justify-center items-center h-64">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+            </div>
+          ) : registeredEvents.length === 0 ? (
+            <div className="bg-gray-50 rounded-lg p-6 text-center">
+              <p className="text-gray-600 mb-4">
+                You haven't registered for any events yet.
+              </p>
+              <Link
+                to="/dashboard/events"
+                className="inline-flex items-center justify-center px-5 py-2 border border-transparent text-base font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
+              >
+                Find Events
+              </Link>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {registeredEvents.map((registration) => (
+                <div
+                  key={registration._id}
+                  className="bg-white rounded-lg shadow-md overflow-hidden border border-gray-200"
+                >
+                  <div className="p-5">
+                    <div className="flex flex-col md:flex-row justify-between items-start gap-4">
+                      <div className="flex-1">
+                        <div className="flex items-center mb-2">
+                          <StatusBadge status={registration.status} />
+                          <span className="ml-2 text-gray-500 text-sm">
+                            Registered on{" "}
+                            {new Date(
+                              registration.createdAt
+                            ).toLocaleDateString()}
+                          </span>
+                        </div>
+
+                        <h3 className="text-lg font-bold mb-2">
+                          {registration.eventId?.title ||
+                            (typeof registration.eventId === "string"
+                              ? "Event ID: " + registration.eventId
+                              : "Unnamed Event")}
+                        </h3>
+
+                        {registration.eventId &&
+                          registration.eventId.startDate && (
+                            <div className="flex items-center text-sm text-gray-600 mb-1">
+                              <FiCalendar className="mr-2" />
+                              {formatDate(
+                                registration.eventId.startDate
+                              )} - {formatDate(registration.eventId.endDate)}
+                            </div>
+                          )}
+
+                        {registration.shiftId && (
+                          <div className="flex items-center text-sm text-gray-600 mb-1">
+                            <FiClock className="mr-2" />
+                            Shift:{" "}
+                            {registration.shiftId.name || "Unnamed Shift"}
+                            {registration.shiftId.startTime && (
+                              <>
+                                (
+                                {new Date(
+                                  registration.shiftId.startTime
+                                ).toLocaleTimeString()}{" "}
+                                -
+                                {new Date(
+                                  registration.shiftId.endTime
+                                ).toLocaleTimeString()}
+                                )
+                              </>
+                            )}
+                          </div>
+                        )}
+
+                        <div className="flex items-center text-sm text-gray-600 mb-3">
+                          <FiMapPin className="mr-2" />
+                          {registration.eventId && registration.eventId.location
+                            ? registration.eventId.location
+                            : "No location specified"}
+                        </div>
+
+                        <div className="text-xs text-gray-500 mt-2">
+                          Registration ID: {registration._id}
+                          <br />
+                          Status: {registration.status}
+                          <br />
+                          {registration.eventId &&
+                            typeof registration.eventId !== "string" && (
+                              <>
+                                Event title: {registration.eventId.title}
+                                <br />
+                              </>
+                            )}
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col gap-2">
+                        <Link
+                          to={`/dashboard/events/${
+                            typeof registration.eventId === "string"
+                              ? registration.eventId
+                              : registration.eventId?._id
+                          }`}
+                          className="inline-flex items-center justify-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                        >
+                          View Details
+                        </Link>
+
+                        {registration.status === "Registered" && (
+                          <button
+                            onClick={() =>
+                              handleWithdrawFromEvent(registration._id)
+                            }
+                            disabled={withdrawing}
+                            className={`inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white ${
+                              withdrawing && withdrawingId === registration._id
+                                ? "bg-orange-400 cursor-wait"
+                                : "bg-orange-500 hover:bg-orange-600"
+                            } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500`}
+                          >
+                            {withdrawing &&
+                            withdrawingId === registration._id ? (
                           <>
                             <span className="animate-spin mr-1.5 h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
                             Withdrawing...
@@ -391,6 +749,8 @@ const MyApplications = () => {
             </div>
           ))}
         </div>
+          )}
+        </>
       )}
     </div>
   );

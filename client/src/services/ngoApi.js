@@ -302,6 +302,55 @@ const ngoApi = {
       throw error;
     }
   },
+
+  // Get all participants for an event
+  getEventParticipants: async (eventId) => {
+    try {
+      const response = await api.get(`/participations/event/${eventId}`);
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching event participants:", error);
+      throw error;
+    }
+  },
+
+  // Check in a volunteer
+  checkInVolunteer: async (participationId) => {
+    try {
+      const response = await api.put(
+        `/participations/checkin/${participationId}`
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error checking in volunteer:", error);
+      throw error;
+    }
+  },
+
+  // Check out a volunteer
+  checkOutVolunteer: async (participationId, data) => {
+    try {
+      const response = await api.put(
+        `/participations/checkout/${participationId}`,
+        data
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error checking out volunteer:", error);
+      throw error;
+    }
+  },
+
+  // Get volunteer registrations for an event (alias for getEventParticipants)
+  getVolunteerRegistrations: async (eventId) => {
+    try {
+      const response = await api.get(`/participations/event/${eventId}`);
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching volunteer registrations:", error);
+      throw error;
+    }
+  },
 };
 
 export { ngoApi };

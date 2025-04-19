@@ -32,6 +32,17 @@ const volunteerApi = {
     }
   },
 
+  // Get volunteer registrations (events the volunteer is registered for)
+  getVolunteerRegistrations: async () => {
+    try {
+      const response = await api.get("/participations/volunteer");
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching volunteer registrations:", error);
+      throw error;
+    }
+  },
+
   // Get volunteer upcoming events
   getUpcomingEvents: async (params = {}) => {
     try {
@@ -260,17 +271,15 @@ const volunteerApi = {
   },
 
   // Withdraw from an event the volunteer is participating in
-  withdrawFromEvent: async (eventId, reason) => {
+  withdrawFromParticipation: async (participationId, reason = "") => {
     try {
-      const response = await api.delete(
-        `/volunteer/events/${eventId}/withdraw`,
-        {
-          data: { reason },
-        }
+      const response = await api.put(
+        `/participation/${participationId}/withdraw`,
+        { reason }
       );
       return response.data;
     } catch (error) {
-      console.error("Error withdrawing from event:", error);
+      console.error("Error withdrawing from participation:", error);
       throw error;
     }
   },
