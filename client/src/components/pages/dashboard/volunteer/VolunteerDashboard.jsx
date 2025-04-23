@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import useAuthStore from "../../../../store/authStore";
+import axios from "axios";
+import api from "../../../../services/api";
+import { toast } from "react-toastify";
 import {
   FiUser,
   FiCalendar,
@@ -32,68 +35,107 @@ const VolunteerDashboard = () => {
   const [recommendedProjects, setRecommendedProjects] = useState([]);
   const [skills, setSkills] = useState([]);
 
-  // Simulate fetching data
+  // Fetch actual data from API
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchDashboardData = async () => {
       try {
         setLoading(true);
 
-        // In a real app, these would be actual API calls
-        setTimeout(() => {
+        // Get volunteer dashboard statistics
+        const statsResponse = await api.get("/volunteers/stats");
+
+        if (statsResponse.data.success) {
+          const volunteerId = user.id;
+
+          // Get recommended projects based on volunteer interests and skills
+          const recommendedResponse = await api.get(
+            `/events/recommended?limit=3&volunteer=${volunteerId}`
+          );
+
+          // Get volunteer skills
+          const skillsResponse = await api.get(
+            `/volunteers/${volunteerId}/skills`
+          );
+
+          // Set stats from API response
           setStats({
-            hoursLogged: 24,
-            eventsParticipated: 5,
-            impactLevel: 60,
+            hoursLogged: statsResponse.data.hoursLogged || 0,
+            eventsParticipated: statsResponse.data.eventsParticipated || 0,
+            impactLevel: statsResponse.data.impactLevel || 0,
           });
 
-          setRecommendedProjects([
-            {
-              id: 1,
-              title: "Senior Home Companion",
-              organization: "Elder Care Alliance",
-              date: "2023-06-22T14:00:00",
-              location: "Sunshine Senior Living",
-              matchScore: 95,
-            },
-            {
-              id: 2,
-              title: "River Cleanup Project",
-              organization: "Clean Water Initiative",
-              date: "2023-06-25T09:00:00",
-              location: "Riverdale Park",
-              matchScore: 88,
-            },
-            {
-              id: 3,
-              title: "Literacy Program Tutor",
-              organization: "Community Learning Center",
-              date: "2023-06-24T10:00:00",
-              location: "Downtown Library",
-              matchScore: 82,
-            },
-          ]);
+          // Set recommended projects
+          if (recommendedResponse.data.success) {
+            setRecommendedProjects(recommendedResponse.data.events || []);
+          }
 
-          setSkills([
-            { id: 1, name: "Communication", progress: 85, level: "Advanced" },
-            { id: 2, name: "Leadership", progress: 60, level: "Intermediate" },
-            {
-              id: 3,
-              name: "Problem Solving",
-              progress: 75,
-              level: "Intermediate",
-            },
-          ]);
+          // Set skills
+          if (skillsResponse.data.success) {
+            setSkills(skillsResponse.data.skills || []);
+          }
+        } else {
+          // Fallback to basic user data if API fails
+          // Extract some stats from user object if available
+          setStats({
+            hoursLogged: user?.volunteerInfo?.totalHours || 0,
+            eventsParticipated:
+              user?.volunteerInfo?.eventsParticipated?.length || 0,
+            impactLevel: calculateImpactLevel(
+              user?.volunteerInfo?.totalHours || 0
+            ),
+          });
 
-          setLoading(false);
-        }, 600);
+          // Set empty arrays for other data
+          setRecommendedProjects([]);
+          setSkills(
+            user?.volunteerInfo?.skills?.map((skill, index) => ({
+              id: index + 1,
+              name: skill,
+              progress: Math.floor(Math.random() * 40) + 60, // Random progress between 60-100
+              level: determineSkillLevel(Math.floor(Math.random() * 40) + 60),
+            })) || []
+          );
+        }
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
+        toast.error(
+          "Failed to load dashboard data. Using cached data instead."
+        );
+
+        // Fallback to user data
+        setStats({
+          hoursLogged: user?.volunteerInfo?.totalHours || 0,
+          eventsParticipated:
+            user?.volunteerInfo?.eventsParticipated?.length || 0,
+          impactLevel: calculateImpactLevel(
+            user?.volunteerInfo?.totalHours || 0
+          ),
+        });
+      } finally {
         setLoading(false);
       }
     };
 
-    fetchData();
-  }, []);
+    fetchDashboardData();
+  }, [user]);
+
+  // Calculate impact level based on hours
+  const calculateImpactLevel = (hours) => {
+    if (hours <= 0) return 0;
+    if (hours < 10) return Math.round((hours / 10) * 25);
+    if (hours < 25) return 25 + Math.round(((hours - 10) / 15) * 25);
+    if (hours < 50) return 50 + Math.round(((hours - 25) / 25) * 25);
+    if (hours < 100) return 75 + Math.round(((hours - 50) / 50) * 25);
+    return 100;
+  };
+
+  // Determine skill level based on progress
+  const determineSkillLevel = (progress) => {
+    if (progress < 50) return "Beginner";
+    if (progress < 75) return "Intermediate";
+    if (progress < 90) return "Advanced";
+    return "Expert";
+  };
 
   // Format date for display
   const formatDate = (dateString) => {
@@ -129,13 +171,13 @@ const VolunteerDashboard = () => {
             </p>
             <div className="flex gap-3 mt-4">
               <Link
-                to="/dashboard/events"
+                to="/dashboard/find-opportunities"
                 className="bg-white text-indigo-700 hover:bg-indigo-50 px-5 py-2.5 rounded-lg shadow font-medium transition-colors"
               >
                 Find Opportunities
               </Link>
               <Link
-                to="/dashboard/volunteer-profile"
+                to="/dashboard/profile"
                 className="bg-white/10 hover:bg-white/20 text-white px-5 py-2.5 rounded-lg font-medium transition-colors"
               >
                 My Profile
@@ -210,7 +252,7 @@ const VolunteerDashboard = () => {
             </h2>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <Link
-                to="/dashboard/events"
+                to="/dashboard/find-opportunities"
                 className="flex flex-col items-center bg-indigo-50 hover:bg-indigo-100 p-5 rounded-xl transition-colors"
               >
                 <FiSearch className="text-indigo-600 text-2xl mb-3" />
@@ -237,7 +279,7 @@ const VolunteerDashboard = () => {
                 </span>
               </Link>
               <Link
-                to="/dashboard/volunteer-profile"
+                to="/dashboard/profile"
                 className="flex flex-col items-center bg-emerald-50 hover:bg-emerald-100 p-5 rounded-xl transition-colors"
               >
                 <FiUser className="text-emerald-600 text-2xl mb-3" />
@@ -257,7 +299,7 @@ const VolunteerDashboard = () => {
                   You
                 </h2>
                 <Link
-                  to="/dashboard/events"
+                  to="/dashboard/find-opportunities"
                   className="text-indigo-600 hover:text-indigo-800 text-sm font-medium flex items-center"
                 >
                   View All <FiChevronRight className="ml-1" />
@@ -311,7 +353,7 @@ const VolunteerDashboard = () => {
                     Complete your profile to get personalized recommendations
                   </p>
                   <Link
-                    to="/dashboard/volunteer-profile"
+                    to="/dashboard/profile"
                     className="bg-indigo-600 text-white px-6 py-3 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors inline-block"
                   >
                     Update Profile

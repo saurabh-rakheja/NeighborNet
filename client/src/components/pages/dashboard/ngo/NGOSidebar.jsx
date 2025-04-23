@@ -124,15 +124,15 @@ const NGOSidebar = ({ isMobile, onToggle }) => {
       badge: pendingApplicationsCount > 0 ? pendingApplicationsCount : null,
       badgeColor: "bg-amber-500 text-white",
     },
-    {
-      name: "Messages",
-      icon: <FiMessageSquare className="h-5 w-5" />,
-      path: "/ngo-dashboard/messages",
-    },
   ];
 
   // Support navigation items
   const supportNav = [
+    {
+      name: "Organization Profile",
+      icon: <FiUsers className="h-5 w-5" />,
+      path: "/ngo-dashboard/profile",
+    },
     {
       name: "Help Center",
       icon: <FiHelpCircle className="h-5 w-5" />,

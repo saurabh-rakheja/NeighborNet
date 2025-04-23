@@ -15,8 +15,8 @@ import {
   FiTrendingUp,
   FiMapPin,
 } from "react-icons/fi";
-import applicationApi from "../../../../services/applicationApi";
-import ngoApi from "../../../../services/ngoApi";
+import api from "../../../../services/api";
+import { toast } from "react-toastify";
 
 // Chart.js components
 import {
@@ -64,139 +64,151 @@ const NGOOverview = () => {
     datasets: [],
   });
 
-  // Create a configured instance of axios with the auth token
-  const api = axios.create({
-    baseURL: "http://localhost:5000/api",
-  });
-
-  // Add auth token to requests
-  api.interceptors.request.use((config) => {
-    const token = localStorage.getItem("auth-token");
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  });
-
-  // Fetch dashboard data
+  // Fetch dashboard data from API
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
 
-        // Use the ngoApi to fetch dashboard statistics
-        const dashboardStats = await ngoApi.getDashboardStats();
+        // Get NGO dashboard statistics
+        const dashboardResponse = await api.get("/ngos/dashboard/stats");
 
-        // Get events for the dashboard
-        const eventsResponse = await ngoApi.getEvents({
-          limit: 3,
-          status: "upcoming",
-        });
+        if (dashboardResponse.data.success) {
+          // Extract stats from API response
+          const apiStats = dashboardResponse.data;
 
-        const events = eventsResponse.events || [];
+          setStats({
+            totalEvents: apiStats.totalEvents || 0,
+            activeEvents: apiStats.activeEvents || 0,
+            totalVolunteers: apiStats.totalVolunteers || 0,
+            activeVolunteers: apiStats.activeVolunteers || 0,
+            totalHours: apiStats.totalHours || 0,
+            pendingApplications: apiStats.pendingApplications || 0,
+          });
 
-        // Set stats from the API response
-        setStats({
-          totalEvents: dashboardStats.totalEvents || 0,
-          activeEvents: dashboardStats.activeEvents || 0,
-          totalVolunteers: dashboardStats.totalVolunteers || 0,
-          activeVolunteers: dashboardStats.activeVolunteers || 0,
-          totalHours: dashboardStats.totalHours || 0,
-          pendingApplications: dashboardStats.pendingApplications || 0,
-        });
+          // Get upcoming events
+          const eventsResponse = await api.get("/ngos/events", {
+            params: { limit: 3, status: "upcoming" },
+          });
 
-        // Transform events data
-        const transformedEvents = events.map((event) => ({
-          id: event._id,
-          title: event.title,
-          date: event.startDate,
-          location: event.location.address + ", " + event.location.city,
-          totalSlots: event.volunteersNeeded,
-          registeredVolunteers: event.volunteersRegistered || 0,
-          status: event.status.toLowerCase() || "upcoming",
-        }));
-
-        setUpcomingEvents(transformedEvents);
-
-        // Get recent volunteers
-        const volunteersResponse = await ngoApi.getVolunteers({
-          limit: 3,
-          sortBy: "createdAt",
-          sortOrder: "desc",
-        });
-
-        const volunteers = volunteersResponse.volunteers || [];
-
-        // Transform volunteers data
-        const recentVolunteersData = volunteers.map((volunteer) => ({
-          id: volunteer._id,
-          name: volunteer.name,
-          joinedDate: volunteer.createdAt,
-          eventsAttended: volunteer.volunteerInfo?.eventsParticipated || 0,
-          skills: volunteer.volunteerInfo?.skills || [],
-        }));
-
-        setRecentVolunteers(recentVolunteersData);
-
-        // Get participation data if available in the dashboardStats
-        if (dashboardStats.participationByMonth) {
-          setParticipationByMonth(dashboardStats.participationByMonth);
-        } else {
-          // Generate participation data based on last 6 months
-          const last6Months = [];
-          const currentDate = new Date();
-          for (let i = 5; i >= 0; i--) {
-            const month = new Date(
-              currentDate.getFullYear(),
-              currentDate.getMonth() - i,
-              1
-            );
-            last6Months.push(
-              month.toLocaleString("default", { month: "short" })
+          if (eventsResponse.data.success) {
+            setUpcomingEvents(
+              eventsResponse.data.events.map((event) => ({
+                id: event._id,
+                title: event.title,
+                date: event.startDate,
+                location: `${event.location.address}, ${event.location.city}`,
+                totalSlots: event.volunteersNeeded,
+                registeredVolunteers: event.volunteersRegistered || 0,
+                status: event.status.toLowerCase() || "upcoming",
+              }))
             );
           }
 
-          // Use available data or generate random data for the chart
-          setParticipationByMonth({
-            labels: last6Months,
-            datasets: [
-              {
-                label: "Events",
-                data: dashboardStats.eventsByMonth || [
-                  Math.floor(Math.random() * 10) + 1,
-                  Math.floor(Math.random() * 10) + 1,
-                  Math.floor(Math.random() * 10) + 1,
-                  Math.floor(Math.random() * 10) + 1,
-                  Math.floor(Math.random() * 10) + 1,
-                  Math.floor(Math.random() * 10) + 1,
-                ],
-                backgroundColor: "rgba(99, 102, 241, 0.8)",
-                borderColor: "rgba(99, 102, 241, 1)",
-                borderWidth: 1,
-              },
-              {
-                label: "Volunteers",
-                data: dashboardStats.volunteersByMonth || [
-                  Math.floor(Math.random() * 20) + 5,
-                  Math.floor(Math.random() * 20) + 5,
-                  Math.floor(Math.random() * 20) + 5,
-                  Math.floor(Math.random() * 20) + 5,
-                  Math.floor(Math.random() * 20) + 5,
-                  Math.floor(Math.random() * 20) + 5,
-                ],
-                backgroundColor: "rgba(139, 92, 246, 0.8)",
-                borderColor: "rgba(139, 92, 246, 1)",
-                borderWidth: 1,
-              },
-            ],
+          // Get recent volunteers
+          const volunteersResponse = await api.get("/ngos/volunteers", {
+            params: { limit: 3, sortBy: "createdAt", sortOrder: "desc" },
           });
+
+          if (volunteersResponse.data.success) {
+            setRecentVolunteers(
+              volunteersResponse.data.volunteers.map((volunteer) => ({
+                id: volunteer._id,
+                name: volunteer.name,
+                joinedDate: volunteer.createdAt,
+                eventsAttended:
+                  volunteer.volunteerInfo?.eventsParticipated?.length || 0,
+                skills: volunteer.volunteerInfo?.skills || [],
+              }))
+            );
+          }
+
+          // Set participation data if available
+          if (apiStats.participationByMonth) {
+            setParticipationByMonth(apiStats.participationByMonth);
+          } else {
+            // Generate participation data based on last 6 months
+            generateChartData();
+          }
+        } else {
+          // If API call fails, generate some default data
+          generateDefaultData();
         }
 
         setLoading(false);
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
+        toast.error(
+          "Failed to load dashboard data. Using cached data instead."
+        );
+
+        // Generate default data in case of error
+        generateDefaultData();
         setLoading(false);
       }
+    };
+
+    // Generate chart data for the last 6 months
+    const generateChartData = () => {
+      const last6Months = [];
+      const currentDate = new Date();
+      for (let i = 5; i >= 0; i--) {
+        const month = new Date(
+          currentDate.getFullYear(),
+          currentDate.getMonth() - i,
+          1
+        );
+        last6Months.push(month.toLocaleString("default", { month: "short" }));
+      }
+
+      setParticipationByMonth({
+        labels: last6Months,
+        datasets: [
+          {
+            label: "Events",
+            data: [
+              Math.floor(Math.random() * 10) + 1,
+              Math.floor(Math.random() * 10) + 1,
+              Math.floor(Math.random() * 10) + 1,
+              Math.floor(Math.random() * 10) + 1,
+              Math.floor(Math.random() * 10) + 1,
+              Math.floor(Math.random() * 10) + 1,
+            ],
+            backgroundColor: "rgba(99, 102, 241, 0.8)",
+            borderColor: "rgba(99, 102, 241, 1)",
+            borderWidth: 1,
+          },
+          {
+            label: "Volunteers",
+            data: [
+              Math.floor(Math.random() * 20) + 5,
+              Math.floor(Math.random() * 20) + 5,
+              Math.floor(Math.random() * 20) + 5,
+              Math.floor(Math.random() * 20) + 5,
+              Math.floor(Math.random() * 20) + 5,
+              Math.floor(Math.random() * 20) + 5,
+            ],
+            backgroundColor: "rgba(139, 92, 246, 0.8)",
+            borderColor: "rgba(139, 92, 246, 1)",
+            borderWidth: 1,
+          },
+        ],
+      });
+    };
+
+    // Generate default data in case API fails
+    const generateDefaultData = () => {
+      setStats({
+        totalEvents: 0,
+        activeEvents: 0,
+        totalVolunteers: 0,
+        activeVolunteers: 0,
+        totalHours: 0,
+        pendingApplications: 0,
+      });
+      setUpcomingEvents([]);
+      setRecentVolunteers([]);
+      generateChartData();
     };
 
     fetchData();

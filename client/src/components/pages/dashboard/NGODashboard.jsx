@@ -10,7 +10,7 @@ import CreateEvent from "./ngo/CreateEvent";
 import NGOEventDetails from "./ngo/NGOEventDetails";
 import NGOSidebar from "./ngo/NGOSidebar";
 import NGOApplications from "./ngo/NGOApplications";
-import NGOMessages from "./ngo/NGOMessages";
+import NGOProfileEditor from "./ngo/NGOProfileEditor";
 import VolunteerProfile from "./ngo/VolunteerProfile";
 import { useState, useEffect } from "react";
 
@@ -88,7 +88,10 @@ const NGODashboard = () => {
             <button className="p-2 text-gray-500 rounded-full hover:bg-gray-100">
               <FiBell className="h-5 w-5" />
             </button>
-            <button className="p-2 text-gray-500 rounded-full hover:bg-gray-100">
+            <button
+              className="p-2 text-gray-500 rounded-full hover:bg-gray-100"
+              onClick={() => navigate("/ngo-dashboard/settings")}
+            >
               <FiSettings className="h-5 w-5" />
             </button>
             <div className="flex items-center">
@@ -114,20 +117,13 @@ const NGODashboard = () => {
             <Route path="/analytics" element={<NGOAnalytics />} />
             <Route path="/create-event" element={<CreateEvent />} />
             <Route path="/applications" element={<NGOApplications />} />
-            <Route path="/messages" element={<NGOMessages />} />
+            <Route path="/profile" element={<NGOProfileEditor />} />
+            <Route path="/settings" element={<NGOProfileEditor />} />
             <Route
               path="/help"
               element={
                 <div className="p-8 text-center text-gray-600">
                   Help Center (Coming Soon)
-                </div>
-              }
-            />
-            <Route
-              path="/settings"
-              element={
-                <div className="p-8 text-center text-gray-600">
-                  Settings (Coming Soon)
                 </div>
               }
             />

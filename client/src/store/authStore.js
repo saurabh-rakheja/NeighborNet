@@ -200,11 +200,11 @@ const useAuthStore = create(
           console.log("Refreshing user data...");
           const response = await api.get("/auth/me");
           console.log("Auth/me response:", response.data);
-          
+
           // Handle different response formats
           // The server might return data in response.data.data or response.data.user
           let userData;
-          
+
           if (response.data.data) {
             userData = response.data.data;
           } else if (response.data.user) {
@@ -213,24 +213,24 @@ const useAuthStore = create(
             // If neither format is found, try to use the whole response
             userData = response.data.success ? response.data : null;
           }
-          
+
           if (!userData) {
             throw new Error("Invalid response format from server");
           }
-          
+
           set({
             user: userData,
             isLoading: false,
           });
 
-          return { 
-            success: true, 
+          return {
+            success: true,
             message: "User data refreshed",
-            user: userData 
+            user: userData,
           };
         } catch (error) {
           console.error("Error in refreshUserData:", error);
-          
+
           // If token is invalid or expired, log out the user
           if (error.response?.status === 401) {
             get().logout();
@@ -239,13 +239,14 @@ const useAuthStore = create(
               message: "Session expired. Please login again.",
             };
           }
-          
+
           // Handle 404 errors specifically
           if (error.response?.status === 404) {
             return {
               success: false,
-              message: "API endpoint not found. The server may be misconfigured.",
-              notFound: true
+              message:
+                "API endpoint not found. The server may be misconfigured.",
+              notFound: true,
             };
           }
 
@@ -327,7 +328,11 @@ const useAuthStore = create(
         set({ isLoading: true, error: null });
 
         try {
-          const response = await api.post("/auth/forgot-password", { email });
+          // Need to specify userType for the backend API
+          const response = await api.post("/auth/forgot-password", {
+            email,
+            userType: "volunteer", // Default to volunteer, API will determine actual user type
+          });
 
           set({ isLoading: false });
 
@@ -355,9 +360,10 @@ const useAuthStore = create(
         set({ isLoading: true, error: null });
 
         try {
-          const response = await api.post("/auth/reset-password", {
-            token,
-            newPassword,
+          // Using PATCH method to match server route
+          const response = await api.patch(`/auth/reset-password/${token}`, {
+            password: newPassword,
+            userType: "volunteer", // Default to volunteer, API will determine actual user type based on token
           });
 
           set({ isLoading: false });
@@ -383,34 +389,36 @@ const useAuthStore = create(
       // Add the updateUserProfile method to the authStore
       updateUserProfile: async (profileData) => {
         try {
-          const token = localStorage.getItem('auth-token');
+          const token = localStorage.getItem("auth-token");
           if (!token) {
-            return { success: false, message: 'Authentication required' };
+            return { success: false, message: "Authentication required" };
           }
 
           // Just send the entire data structure as is - it's already formatted correctly
-          const response = await api.put('/users/profile', profileData);
-          
+          const response = await api.put("/users/profile", profileData);
+
           if (response.data.success) {
             // Update local user state
             set((state) => ({
               user: {
                 ...state.user,
-                ...profileData
-              }
+                ...profileData,
+              },
             }));
             return { success: true };
           }
 
-          return { 
-            success: false, 
-            message: response.data.message || 'Profile update failed. Please try again.' 
-          };
-        } catch (error) {
-          console.error('Error updating profile:', error);
           return {
             success: false,
-            message: error.response?.data?.message || 'Error updating profile'
+            message:
+              response.data.message ||
+              "Profile update failed. Please try again.",
+          };
+        } catch (error) {
+          console.error("Error updating profile:", error);
+          return {
+            success: false,
+            message: error.response?.data?.message || "Error updating profile",
           };
         }
       },

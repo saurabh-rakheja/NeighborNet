@@ -307,32 +307,54 @@ const VolunteerImpact = () => {
 
         {/* Right Column - Skills and Achievements */}
         <div className="space-y-8">
-          {/* Skills Progress */}
+          {/* Skill Progress */}
           <div className="bg-white rounded-xl shadow-md p-6">
             <h2 className="text-xl font-semibold mb-4 text-gray-800 flex items-center">
-              <FiTrendingUp className="mr-2 text-indigo-500" /> Skills
-              Development
+              <FiTrendingUp className="mr-2 text-indigo-500" /> Skills Progress
             </h2>
 
             {loading ? (
-              <div className="h-48 flex items-center justify-center">
+              <div className="h-64 flex items-center justify-center">
                 <p className="text-gray-500">Loading data...</p>
               </div>
             ) : (
-              <div className="space-y-5">
+              <div className="space-y-6">
                 {impactData.skillProgress.map((skill, index) => (
                   <div key={index}>
                     <div className="flex justify-between items-center mb-1">
                       <span className="text-sm font-medium text-gray-700">
                         {skill.name}
                       </span>
-                      <span className="text-xs py-0.5 px-2 bg-indigo-100 text-indigo-800 rounded-full">
-                        {skill.level}
-                      </span>
+                      <div className="flex items-center">
+                        <span className="text-xs font-semibold text-gray-500 mr-2">
+                          {skill.progress}%
+                        </span>
+                        <span
+                          className={`text-xs px-2 py-0.5 rounded-full ${
+                            skill.level === "Beginner"
+                              ? "bg-blue-100 text-blue-800"
+                              : skill.level === "Intermediate"
+                              ? "bg-green-100 text-green-800"
+                              : skill.level === "Advanced"
+                              ? "bg-purple-100 text-purple-800"
+                              : "bg-indigo-100 text-indigo-800"
+                          }`}
+                        >
+                          {skill.level}
+                        </span>
+                      </div>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2.5">
                       <div
-                        className="bg-indigo-500 h-2.5 rounded-full"
+                        className={`h-2.5 rounded-full ${
+                          skill.level === "Beginner"
+                            ? "bg-blue-500"
+                            : skill.level === "Intermediate"
+                            ? "bg-green-500"
+                            : skill.level === "Advanced"
+                            ? "bg-purple-500"
+                            : "bg-indigo-500"
+                        }`}
                         style={{ width: `${skill.progress}%` }}
                       ></div>
                     </div>
@@ -340,15 +362,6 @@ const VolunteerImpact = () => {
                 ))}
               </div>
             )}
-
-            <div className="mt-6 text-center">
-              <Link
-                to="/dashboard/volunteer-profile"
-                className="inline-flex items-center text-sm font-medium text-indigo-600 hover:text-indigo-800"
-              >
-                Update your skills <FiChevronRight className="ml-1" />
-              </Link>
-            </div>
           </div>
 
           {/* Achievements */}
