@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import axios from "axios";
 import {
   FiCalendar,
   FiClock,
@@ -81,15 +80,6 @@ const CreateEvent = () => {
     "Manual Labor",
   ];
 
-  // Create API instance
-  const api = axios.create({
-    baseURL: import.meta.env.VITE_API_URL || "http://localhost:5000/api",
-    headers: {
-      Authorization: `Bearer ${localStorage.getItem("auth-token")}`,
-      "Content-Type": "application/json",
-    },
-  });
-
   // Load event data if in edit mode
   useEffect(() => {
     const fetchEventData = async () => {
@@ -97,10 +87,10 @@ const CreateEvent = () => {
 
       try {
         setInitialLoading(true);
-        const { data } = await api.get(`/events/${id}`);
+        const response = await eventApi.getEventById(id);
 
-        if (data?.success) {
-          const event = data.data || data.event;
+        if (response?.success) {
+          const event = response.data || response.event;
 
           // Format dates for form
           const startDate = event.startDate
@@ -156,7 +146,7 @@ const CreateEvent = () => {
   // Handle form input changes
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    
+
     if (name.includes("location.")) {
       const locationField = name.split(".")[1];
       setEventData({
@@ -213,13 +203,13 @@ const CreateEvent = () => {
 
       if (isEditMode) {
         // Update existing event
-        response = await api.put(`/events/${id}`, eventPayload);
+        response = await eventApi.updateEvent(id, eventPayload);
       } else {
         // Create new event
         response = await eventApi.createEvent(eventPayload);
       }
 
-      if (response.data.success) {
+      if (response.success) {
         setSuccess(true);
         // Redirect to the events page after 2 seconds
         setTimeout(() => {
@@ -227,7 +217,7 @@ const CreateEvent = () => {
         }, 2000);
       } else {
         throw new Error(
-          response.data.message ||
+          response.message ||
             `Failed to ${isEditMode ? "update" : "create"} event`
         );
       }
@@ -256,12 +246,12 @@ const CreateEvent = () => {
     );
   }
 
-        return (
+  return (
     <div className="container mx-auto">
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-gray-800">
           {isEditMode ? "Edit Event" : "Create New Event"}
-            </h2>
+        </h2>
         <p className="text-gray-600 mt-1">
           {isEditMode
             ? "Update the details of your event below."
@@ -294,57 +284,57 @@ const CreateEvent = () => {
           <h3 className="text-lg font-semibold text-gray-800 mb-4">
             Basic Information
           </h3>
-            <div className="space-y-4">
-              <div>
+          <div className="space-y-4">
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Event Title *
-                </label>
-                <input
-                  type="text"
-                  name="title"
+              </label>
+              <input
+                type="text"
+                name="title"
                 value={eventData.title}
-                  onChange={handleChange}
+                onChange={handleChange}
                 required
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
                 placeholder="Enter a descriptive title for your event"
               />
-              </div>
+            </div>
 
-              <div>
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Description *
-                </label>
-                <textarea
-                  name="description"
+              </label>
+              <textarea
+                name="description"
                 value={eventData.description}
-                  onChange={handleChange}
+                onChange={handleChange}
                 required
                 rows={4}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
                 placeholder="Describe what volunteers will be doing and the impact of this event"
               />
-              </div>
+            </div>
 
-              <div>
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Category *
-                </label>
-                <select
-                  name="category"
+              </label>
+              <select
+                name="category"
                 value={eventData.category}
-                  onChange={handleChange}
+                onChange={handleChange}
                 required
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
-                >
-                  {categories.map((category) => (
+              >
+                {categories.map((category) => (
                   <option key={category.value} value={category.value}>
                     {category.label}
-                    </option>
-                  ))}
-                </select>
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
-              </div>
+        </div>
 
         {/* Date and Time */}
         <div className="bg-white rounded-xl shadow-sm p-6">
@@ -366,19 +356,19 @@ const CreateEvent = () => {
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
               />
             </div>
-              <div>
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Start Time *
-                </label>
-                  <input
+              </label>
+              <input
                 type="time"
                 name="startTime"
                 value={eventData.startTime}
-                    onChange={handleChange}
+                onChange={handleChange}
                 required
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
-                  />
-                </div>
+              />
+            </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 End Date *
@@ -391,7 +381,7 @@ const CreateEvent = () => {
                 required
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
               />
-              </div>
+            </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 End Time *
@@ -414,7 +404,7 @@ const CreateEvent = () => {
             <FiMapPin className="inline-block mr-2" />
             Location
           </h3>
-            <div className="space-y-4">
+          <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Address *
@@ -443,15 +433,15 @@ const CreateEvent = () => {
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
                 />
               </div>
-                <div>
+              <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   State *
-                  </label>
-                  <input
-                    type="text"
-                    name="location.state"
+                </label>
+                <input
+                  type="text"
+                  name="location.state"
                   value={eventData.location.state}
-                    onChange={handleChange}
+                  onChange={handleChange}
                   required
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
                 />
@@ -471,7 +461,7 @@ const CreateEvent = () => {
               </div>
             </div>
           </div>
-                </div>
+        </div>
 
         {/* Volunteers */}
         <div className="bg-white rounded-xl shadow-sm p-6">
@@ -479,23 +469,23 @@ const CreateEvent = () => {
             <FiUsers className="inline-block mr-2" />
             Volunteer Details
           </h3>
-            <div className="space-y-4">
-              <div>
+          <div className="space-y-4">
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Number of Volunteers Needed *
-                </label>
-                <input
-                  type="number"
-                  name="volunteersNeeded"
+              </label>
+              <input
+                type="number"
+                name="volunteersNeeded"
                 value={eventData.volunteersNeeded}
-                  onChange={handleChange}
+                onChange={handleChange}
                 required
                 min={1}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
               />
-              </div>
+            </div>
 
-              <div>
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Required Skills (Optional)
               </label>
@@ -515,26 +505,26 @@ const CreateEvent = () => {
                   </button>
                 ))}
               </div>
-              </div>
+            </div>
 
             <div className="flex items-center mt-2">
-                  <input
-                    type="checkbox"
-                    id="requiresApproval"
-                    name="requiresApproval"
+              <input
+                type="checkbox"
+                id="requiresApproval"
+                name="requiresApproval"
                 checked={eventData.requiresApproval}
-                    onChange={handleChange}
+                onChange={handleChange}
                 className="h-4 w-4 text-indigo-600 focus:ring-indigo-500"
-                  />
+              />
               <label
                 htmlFor="requiresApproval"
                 className="ml-2 text-sm font-medium text-gray-700"
               >
-                    Require approval for volunteer applications
-                  </label>
-                </div>
+                Require approval for volunteer applications
+              </label>
+            </div>
           </div>
-              </div>
+        </div>
 
         {/* Contact Information */}
         <div className="bg-white rounded-xl shadow-sm p-6">
@@ -546,16 +536,16 @@ const CreateEvent = () => {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Contact Email *
-                </label>
+              </label>
               <input
                 type="email"
                 name="contactEmail"
                 value={eventData.contactEmail}
-                  onChange={handleChange}
+                onChange={handleChange}
                 required
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
               />
-              </div>
+            </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Contact Phone (Optional)
@@ -569,7 +559,7 @@ const CreateEvent = () => {
               />
             </div>
           </div>
-          </div>
+        </div>
 
         {/* Form Actions */}
         <div className="flex justify-end gap-4">
@@ -580,8 +570,8 @@ const CreateEvent = () => {
           >
             Cancel
           </button>
-              <button
-                type="submit"
+          <button
+            type="submit"
             disabled={loading || success}
             className={`px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors ${
               (loading || success) && "opacity-70 cursor-not-allowed"
@@ -598,11 +588,11 @@ const CreateEvent = () => {
               : isEditMode
               ? "Update Event"
               : "Create Event"}
-              </button>
-          </div>
-        </form>
+          </button>
+        </div>
+      </form>
     </div>
   );
 };
 
-export default CreateEvent; 
+export default CreateEvent;

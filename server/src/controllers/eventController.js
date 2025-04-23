@@ -1,5 +1,6 @@
 const Event = require("../models/eventSchema");
 const User = require("../models/userSchema");
+const EventApplication = require("../models/eventApplicationSchema");
 
 // Create a new event
 exports.createEvent = async (req, res) => {
@@ -18,7 +19,6 @@ exports.createEvent = async (req, res) => {
     };
 
     const event = await Event.create(eventData);
-
     res.status(201).json({
       success: true,
       data: event,
@@ -85,8 +85,8 @@ exports.getAllEvents = async (req, res) => {
 exports.getEventById = async (req, res) => {
   try {
     const event = await Event.findById(req.params.id).populate({
-        path: "organizerId",
-        select: "name email organization",
+      path: "organizerId",
+      select: "name email organization",
     });
 
     if (!event) {
@@ -317,6 +317,7 @@ exports.registerForEvent = async (req, res) => {
   try {
     const eventId = req.params.id;
     const volunteerId = req.user.id;
+    const { motivationLetter, skillsRelevance } = req.body;
 
     // Find the event
     const event = await Event.findById(eventId);
@@ -336,20 +337,11 @@ exports.registerForEvent = async (req, res) => {
       });
     }
 
-    // Initialize registeredVolunteers if it doesn't exist
-    if (!event.registeredVolunteers) {
-      event.registeredVolunteers = [];
-    }
-
-    // Check if volunteer is already registered
-    const alreadyRegistered = event.registeredVolunteers.some(
-      (registration) => registration.volunteer.toString() === volunteerId
-    );
-
-    if (alreadyRegistered) {
+    // Check if event is active and upcoming
+    if (event.status !== "Upcoming") {
       return res.status(400).json({
         success: false,
-        message: "You are already registered for this event",
+        message: "Cannot register for past, ongoing, or cancelled events",
       });
     }
 
@@ -361,30 +353,50 @@ exports.registerForEvent = async (req, res) => {
       });
     }
 
-    // Add volunteer to event
-    event.registeredVolunteers.push({
-      volunteer: volunteerId,
-      status: event.requiresApproval ? "pending" : "approved",
-      registeredAt: new Date(),
+    // Check if volunteer is already registered using the new Registration model
+    const Registration = require("../models/registrationSchema");
+    const existingRegistration = await Registration.findOne({
+      eventId,
+      volunteerId,
     });
 
-    // Increment volunteersRegistered count
-    event.volunteersRegistered = (event.volunteersRegistered || 0) + 1;
+    if (existingRegistration) {
+      return res.status(400).json({
+        success: false,
+        message: "You are already registered for this event",
+      });
+    }
 
+    // Create a new registration using the Registration model
+    const registration = new Registration({
+      eventId,
+      volunteerId,
+      organizerId: event.organizerId,
+      status: event.requiresApproval ? "Pending" : "Approved",
+      registrationDate: new Date(),
+      motivationLetter:
+        motivationLetter || "Interested in volunteering for this event",
+      skillsRelevance: skillsRelevance || "",
+    });
+
+    await registration.save();
+
+    // Increment volunteersRegistered count in the event
+    event.volunteersRegistered = (event.volunteersRegistered || 0) + 1;
     await event.save();
 
-    res.status(200).json({
+    res.status(201).json({
       success: true,
       message: event.requiresApproval
-        ? "Successfully registered. Awaiting approval from the organizer."
+        ? "Registration submitted. Awaiting approval from the organizer."
         : "Successfully registered for the event.",
-      data: event,
+      data: registration,
     });
   } catch (error) {
     console.error("Error registering for event:", error);
     res.status(500).json({
       success: false,
-      message: "Internal server error",
+      message: error.message || "Internal server error",
     });
   }
 };
@@ -428,11 +440,13 @@ exports.getEventAttendees = async (req, res) => {
       });
     }
 
-    // If no registeredVolunteers field or empty array, return empty array
-    if (
-      !event.registeredVolunteers ||
-      event.registeredVolunteers.length === 0
-    ) {
+    // Use Registration model to find all registrations for this event
+    const Registration = require("../models/registrationSchema");
+
+    // Get registrations using the static method
+    const registrations = await Registration.getEventRegistrations(eventId);
+
+    if (registrations.length === 0) {
       return res.status(200).json({
         success: true,
         count: 0,
@@ -440,30 +454,22 @@ exports.getEventAttendees = async (req, res) => {
       });
     }
 
-    // Extract volunteer IDs
-    const volunteerIds = event.registeredVolunteers.map(
-      (registration) => registration.volunteer
-    );
-
-    // Fetch volunteer details
-    const volunteers = await User.find(
-      { _id: { $in: volunteerIds } },
-      "name email role"
-    );
-
-    // Map volunteers to a more friendly format with additional data
-    const attendeesData = volunteers.map((volunteer) => {
-      const registration = event.registeredVolunteers.find(
-        (reg) => reg.volunteer.toString() === volunteer._id.toString()
-      );
+    // Map registrations to a more friendly format with additional data
+    const attendeesData = registrations.map((registration) => {
+      const volunteer = registration.volunteerId;
 
       return {
         id: volunteer._id,
         name: volunteer.name,
         email: volunteer.email,
-        status: registration?.status || "registered",
-        registeredAt: registration?.registeredAt,
-        shifts: 1, // For now, assume 1 shift per registration
+        status: registration.status,
+        registeredAt: registration.registrationDate || registration.createdAt,
+        checkInTime: registration.checkInTime,
+        checkOutTime: registration.checkOutTime,
+        hoursLogged: registration.hoursLogged,
+        feedback: registration.volunteerFeedback,
+        phoneNumber: volunteer.profile?.phoneNumber || "",
+        skills: volunteer.volunteerInfo?.skills || [],
       };
     });
 

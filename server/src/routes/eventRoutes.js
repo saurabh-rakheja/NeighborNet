@@ -2,9 +2,10 @@ const express = require("express");
 const router = express.Router();
 const { authenticateUser, authorizeRoles } = require("../middlewares/auth");
 const eventController = require("../controllers/eventController");
-const EventApplication = require("../models/eventApplicationSchema");
+const Registration = require("../models/registrationSchema");
 const Event = require("../models/eventSchema");
 const Participation = require("../models/participationSchema");
+const mongoose = require("mongoose");
 
 // Create a router for public endpoints
 const publicRouter = express.Router();
@@ -51,104 +52,140 @@ router.delete(
   eventController.deleteEvent
 );
 
-// Registration routes
+// Registration routes - all use the new Registration model
 router.post(
   "/:id/register",
   authorizeRoles("volunteer"),
   eventController.registerForEvent
 );
+
+// Legacy routes that now map to the same registration function
 router.post(
   "/:id/apply",
   authorizeRoles("volunteer"),
   eventController.registerForEvent
 );
+router.post(
+  "/:id/applications",
+  authorizeRoles("volunteer"),
+  eventController.registerForEvent
+);
 
-// Withdraw application route for volunteers
+// Get volunteer's applications (registrations)
+router.get("/applications", authorizeRoles("volunteer"), async (req, res) => {
+  try {
+    const volunteerId = req.user.id;
+    console.log("Fetching registrations for volunteer ID:", volunteerId);
+
+    // Use the Registration model instead of EventApplication
+    const Registration = require("../models/registrationSchema");
+
+    // Use the static method from our Registration model
+    const registrations = await Registration.getVolunteerRegistrations(
+      volunteerId
+    );
+
+    console.log(`Found ${registrations.length} registrations`);
+
+    // Process registrations to ensure they have the required structure for frontend compatibility
+    const processedRegistrations = registrations.map((reg) => {
+      const regObj = reg.toObject();
+
+      // Format for backward compatibility with the old applications structure
+      return {
+        _id: regObj._id,
+        status: regObj.status,
+        applicationDate: regObj.registrationDate || regObj.createdAt,
+        motivationLetter: regObj.motivationLetter,
+        skillsRelevance: regObj.skillsRelevance,
+        event: regObj.eventId,
+        volunteer: regObj.volunteerId,
+        ngo: regObj.organizerId,
+        // Include any other fields needed by the frontend
+        responseDate: regObj.responseDate,
+        feedback: regObj.volunteerFeedback || regObj.organizerFeedback,
+        hoursLogged: regObj.hoursLogged,
+        certificate: regObj.certificate,
+      };
+    });
+
+    res.status(200).json({
+      success: true,
+      applications: processedRegistrations,
+    });
+  } catch (error) {
+    console.error("Error fetching volunteer registrations:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch registrations",
+    });
+  }
+});
+
+// Withdraw application/registration route for volunteers
 router.put(
   "/applications/:id/withdraw",
   authorizeRoles("volunteer"),
   async (req, res) => {
     try {
-      const applicationId = req.params.id;
+      const registrationId = req.params.id;
       const volunteerId = req.user.id;
+      const { reason } = req.body;
 
-      // Find the application
-      const application = await EventApplication.findOne({
-        _id: applicationId,
-        volunteer: volunteerId,
+      // Use Registration model instead of EventApplication
+      const Registration = require("../models/registrationSchema");
+
+      // Find the registration
+      const registration = await Registration.findOne({
+        _id: registrationId,
+        volunteerId: volunteerId,
       });
 
-      if (!application) {
+      if (!registration) {
         return res.status(404).json({
           success: false,
-          message: "Application not found",
+          message: "Registration not found",
         });
       }
 
-      // Update application status
-      application.status = "withdrawn";
-      application.responseDate = new Date();
-
-      // Add withdrawal reason if provided
-      if (req.body.reason) {
-        application.notes = req.body.reason;
+      // Check if registration can be withdrawn
+      if (!["Pending", "Approved"].includes(registration.status)) {
+        return res.status(400).json({
+          success: false,
+          message: `Cannot withdraw registration with status: ${registration.status}`,
+        });
       }
 
-      await application.save();
+      // Update registration status
+      registration.status = "Withdrawn";
+      registration.responseDate = new Date();
+
+      // Add withdrawal reason if provided
+      if (reason) {
+        registration.notes = reason;
+      }
+
+      await registration.save();
+
+      // Decrement event volunteers count
+      await Event.findByIdAndUpdate(registration.eventId, {
+        $inc: { volunteersRegistered: -1 },
+      });
 
       res.status(200).json({
         success: true,
-        message: "Application withdrawn successfully",
-        application,
+        message: "Registration withdrawn successfully",
+        registration,
       });
     } catch (error) {
-      console.error("Error withdrawing application:", error);
+      console.error("Error withdrawing registration:", error);
       res.status(500).json({
         success: false,
-        message: "Failed to withdraw application",
+        message: "Failed to withdraw registration",
       });
     }
   }
 );
-
-// Get volunteer's applications
-router.get("/applications", authorizeRoles("volunteer"), async (req, res) => {
-  try {
-    const volunteerId = req.user.id;
-
-    // Find applications made by this volunteer
-    const applications = await EventApplication.find({
-      volunteer: volunteerId,
-    })
-      .populate("event", "title date location organizerId status")
-      .populate("ngo", "name profile")
-      .sort({ applicationDate: -1 });
-
-    // Process applications to ensure they have the required structure
-    const processedApplications = applications.map((app) => {
-      const appObj = app.toObject();
-
-      // Add organization name if available
-      if (appObj.ngo && appObj.ngo.name) {
-        if (!appObj.event) appObj.event = {};
-        appObj.event.organizationName = appObj.ngo.name;
-      }
-
-      return appObj;
-    });
-
-    res.status(200).json({
-      success: true,
-      applications: processedApplications,
-    });
-  } catch (error) {
-    console.error("Error fetching volunteer applications:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to fetch applications",
-    });
-  }
-});
 
 // Volunteer withdrawal from an event (after being approved)
 router.put(
@@ -160,71 +197,47 @@ router.put(
       const volunteerId = req.user.id;
       const { reason } = req.body;
 
-      // Find the event
-      const event = await Event.findById(eventId);
-      if (!event) {
-        return res.status(404).json({
-          success: false,
-          message: "Event not found",
-        });
-      }
+      // Use Registration model
+      const Registration = require("../models/registrationSchema");
 
-      // Find the volunteer's registration in the event
-      if (
-        !event.registeredVolunteers ||
-        !Array.isArray(event.registeredVolunteers)
-      ) {
+      // Find the registration for this event and volunteer
+      const registration = await Registration.findOne({
+        eventId,
+        volunteerId,
+        status: { $in: ["Approved", "Pending", "Attended"] },
+      });
+
+      if (!registration) {
         return res.status(404).json({
           success: false,
           message: "You are not registered for this event",
         });
       }
 
-      const volunteerIndex = event.registeredVolunteers.findIndex(
-        (reg) =>
-          reg.volunteer &&
-          reg.volunteer.toString() === volunteerId &&
-          reg.status === "approved"
-      );
-
-      if (volunteerIndex === -1) {
-        return res.status(404).json({
-          success: false,
-          message: "You are not approved for this event",
-        });
+      // Update the registration status
+      registration.status = "Withdrawn";
+      if (reason) {
+        registration.notes = reason;
       }
+      registration.responseDate = new Date();
 
-      // Update the volunteer's status to "withdrawn"
-      event.registeredVolunteers[volunteerIndex].status = "withdrawn";
-      event.registeredVolunteers[volunteerIndex].notes =
-        reason || "Volunteer withdrew from the event";
-      event.registeredVolunteers[volunteerIndex].updatedAt = new Date();
+      await registration.save();
 
-      await event.save();
-
-      // Also update the application if it exists
-      const application = await EventApplication.findOne({
-        event: eventId,
-        volunteer: volunteerId,
-        status: "approved",
+      // Update the event's volunteer count
+      await Event.findByIdAndUpdate(eventId, {
+        $inc: { volunteersRegistered: -1 },
       });
-
-      if (application) {
-        application.status = "withdrawn";
-        application.notes = reason || "Volunteer withdrew from the event";
-        application.responseDate = new Date();
-        await application.save();
-      }
 
       res.status(200).json({
         success: true,
         message: "Successfully withdrawn from the event",
+        data: registration,
       });
     } catch (error) {
       console.error("Error withdrawing from event:", error);
       res.status(500).json({
         success: false,
-        message: "Failed to withdraw from event",
+        message: error.message || "Failed to withdraw from event",
       });
     }
   }
@@ -253,52 +266,36 @@ router.put(
         });
       }
 
-      // Find the volunteer's registration in the event
-      if (
-        !event.registeredVolunteers ||
-        !Array.isArray(event.registeredVolunteers)
-      ) {
-        return res.status(404).json({
-          success: false,
-          message: "Volunteer is not registered for this event",
-        });
-      }
-
-      const volunteerIndex = event.registeredVolunteers.findIndex(
-        (reg) => reg.volunteer && reg.volunteer.toString() === volunteerId
-      );
-
-      if (volunteerIndex === -1) {
-        return res.status(404).json({
-          success: false,
-          message: "Volunteer is not registered for this event",
-        });
-      }
-
-      // Update the volunteer's status to "removed"
-      event.registeredVolunteers[volunteerIndex].status = "removed";
-      event.registeredVolunteers[volunteerIndex].notes =
-        reason || "Removed by event organizer";
-      event.registeredVolunteers[volunteerIndex].updatedAt = new Date();
-
-      await event.save();
-
-      // Also update the application if it exists
-      const application = await EventApplication.findOne({
-        event: eventId,
-        volunteer: volunteerId,
+      // Find the registration using the Registration model
+      const registration = await Registration.findOne({
+        eventId,
+        volunteerId,
+        status: { $in: ["Pending", "Approved", "Attended"] },
       });
 
-      if (application) {
-        application.status = "removed";
-        application.notes = reason || "Removed by event organizer";
-        application.responseDate = new Date();
-        await application.save();
+      if (!registration) {
+        return res.status(404).json({
+          success: false,
+          message: "Volunteer is not registered for this event",
+        });
       }
+
+      // Update the registration status to "Rejected"
+      registration.status = "Rejected";
+      registration.notes = reason || "Removed by event organizer";
+      registration.responseDate = new Date();
+
+      await registration.save();
+
+      // Decrement event volunteers count
+      await Event.findByIdAndUpdate(eventId, {
+        $inc: { volunteersRegistered: -1 },
+      });
 
       res.status(200).json({
         success: true,
         message: "Volunteer removed from the event successfully",
+        data: registration,
       });
     } catch (error) {
       console.error("Error removing volunteer from event:", error);
@@ -321,7 +318,7 @@ router.delete(
       const { reason } = req.body;
 
       // Check if the event belongs to the NGO
-      const event = await Event.findOne({ _id: eventId, ngo: ngoId });
+      const event = await Event.findOne({ _id: eventId, organizerId: ngoId });
       if (!event) {
         return res.status(404).json({
           success: false,
@@ -329,51 +326,150 @@ router.delete(
         });
       }
 
-      // Find the participation record
-      const participation = await Participation.findOne({
+      // Find the registration with the new Registration model
+      const registration = await Registration.findOne({
         eventId,
         volunteerId,
-        status: "Confirmed",
+        status: { $in: ["Pending", "Approved", "Attended"] },
       });
 
-      if (!participation) {
+      if (!registration) {
         return res.status(404).json({
           success: false,
           message: "Volunteer not found in this event",
         });
       }
 
-      // Update participation status
-      participation.status = "Removed";
+      // Update registration status
+      registration.status = "Rejected";
       if (reason) {
-        participation.notes = reason;
+        registration.notes = reason;
       }
-      await participation.save();
+      registration.responseDate = new Date();
+
+      await registration.save();
 
       // Decrement event volunteers count
       await Event.findByIdAndUpdate(eventId, {
         $inc: { volunteersRegistered: -1 },
       });
 
-      // If shift exists, remove volunteer from shift
-      if (participation.shiftId) {
-        await Shift.findByIdAndUpdate(participation.shiftId, {
-          $pull: { volunteers: { volunteerId } },
-        });
-      }
-
-      // Notify the volunteer
-      // TODO: Send notification to volunteer
-
       res.status(200).json({
         success: true,
         message: "Volunteer removed from event successfully",
+        data: registration,
       });
     } catch (error) {
       console.error("Error removing volunteer from event:", error);
       res.status(500).json({
         success: false,
         message: "Failed to remove volunteer from event",
+      });
+    }
+  }
+);
+
+// Get volunteer's applications with extended debug info
+router.get(
+  "/volunteer-applications",
+  authorizeRoles("volunteer"),
+  async (req, res) => {
+    try {
+      const volunteerId = req.user.id;
+      console.log(
+        "Fetching volunteer registrations with more debug info:",
+        volunteerId
+      );
+
+      // Find the user to confirm it exists
+      const User = mongoose.model("User");
+      const volunteer = await User.findById(volunteerId);
+      if (!volunteer) {
+        return res.status(400).json({
+          success: false,
+          message: "Volunteer not found",
+          debug: { volunteerId },
+        });
+      }
+
+      // Find registrations for this volunteer using Registration model
+      const rawRegistrations = await Registration.find({
+        volunteerId: volunteerId,
+      });
+
+      console.log(`Found ${rawRegistrations.length} raw registrations`);
+
+      // Use the static method from Registration model for populated data
+      const registrations = await Registration.getVolunteerRegistrations(
+        volunteerId
+      );
+
+      console.log(`Populated ${registrations.length} registrations`);
+
+      // Process registrations with extensive debug info
+      const processedRegistrations = registrations.map((reg) => {
+        const regObj = reg.toObject();
+
+        // Format for debug compatibility with old applications structure
+        const result = {
+          _id: regObj._id,
+          status: regObj.status,
+          applicationDate: regObj.registrationDate || regObj.createdAt,
+          responseDate: regObj.responseDate,
+          motivationLetter: regObj.motivationLetter || "",
+          skillsRelevance: regObj.skillsRelevance || "",
+          notes: regObj.notes || "",
+          volunteer: regObj.volunteerId,
+          ngo: regObj.organizerId,
+          event: regObj.eventId,
+        };
+
+        // Debug info for missing event
+        if (!regObj.eventId) {
+          console.warn(`Registration ${regObj._id} missing event reference`);
+          result._debug = {
+            missingEvent: true,
+            eventId: reg.eventId,
+          };
+          result.event = {
+            title: "Event reference missing",
+            status: "unknown",
+          };
+        } else {
+          // Add organization name if available
+          if (regObj.organizerId && regObj.organizerId.name) {
+            if (!result.event) result.event = {};
+            result.event.organizationName = regObj.organizerId.name;
+          }
+
+          // Make sure the date field exists for backwards compatibility
+          if (regObj.eventId && regObj.eventId.startDate) {
+            if (!result.event) result.event = {};
+            result.event.date = regObj.eventId.startDate;
+          }
+        }
+
+        return result;
+      });
+
+      res.status(200).json({
+        success: true,
+        applications: processedRegistrations,
+        debug: {
+          rawCount: rawRegistrations.length,
+          populatedCount: registrations.length,
+          volunteerId: volunteerId,
+        },
+      });
+    } catch (error) {
+      console.error(
+        "Error fetching volunteer registrations with debug:",
+        error
+      );
+      res.status(500).json({
+        success: false,
+        message: "Failed to fetch registrations",
+        error: error.message,
       });
     }
   }

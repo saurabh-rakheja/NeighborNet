@@ -19,6 +19,7 @@ const userRoutes = require("./routes/userRoutes");
 const eventRoutes = require("./routes/eventRoutes");
 const participationRoutes = require("./routes/participationRoutes");
 const ngoRoutes = require("./routes/ngoRoutes");
+const registrationRoutes = require("./routes/registrationRoutes");
 
 // Load environment variables
 dotenv.config();
@@ -92,18 +93,20 @@ app.use(
 );
 
 // Rate limiting
+/*
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // limit each IP to 100 requests per windowMs
   message: "Too many requests from this IP, please try again later",
 });
 app.use("/api/", limiter);
+*/
 
 // Health check endpoint for API root
-app.get("/api/health", (req, res) => {
-  res.status(200).json({
+app.get("/api", (req, res) => {
+  res.json({
     success: true,
-    message: "API server is running",
+    message: "Volunteer Management System API",
     version: "1.0.0",
     timestamp: new Date().toISOString(),
     endpoints: {
@@ -111,6 +114,8 @@ app.get("/api/health", (req, res) => {
       users: "/api/users",
       events: "/api/events",
       participations: "/api/participations",
+      ngos: "/api/ngos",
+      registrations: "/api/registrations",
     },
   });
 });
@@ -121,6 +126,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/events", eventRoutes);
 app.use("/api/participations", participationRoutes);
 app.use("/api/ngos", ngoRoutes);
+app.use("/api/registrations", registrationRoutes);
 
 // 404 Route
 app.use("*", (req, res) => {

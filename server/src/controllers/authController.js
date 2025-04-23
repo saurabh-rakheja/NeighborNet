@@ -10,12 +10,17 @@ exports.register = async (req, res) => {
     // Check if user already exists via email
     let user = await User.findOne({ email });
     if (user) {
-      return res.status(400).json({ success: false, message: "User already exists" });
+      return res
+        .status(400)
+        .json({ success: false, message: "User already exists" });
     }
 
     // Validate NGO registration
-    if (role === 'ngo' && !organization) {
-      return res.status(400).json({ success: false, message: "Organization name is required for NGO accounts" });
+    if (role === "ngo" && !organization) {
+      return res.status(400).json({
+        success: false,
+        message: "Organization name is required for NGO accounts",
+      });
     }
 
     // Create new user with proper structure
@@ -23,13 +28,13 @@ exports.register = async (req, res) => {
       name,
       email,
       password,
-      role: role || 'volunteer', // Default to volunteer if not specified
+      role: role || "volunteer", // Default to volunteer if not specified
     });
-    
+
     // Add organization to ngoInfo if provided and role is NGO
-    if (role === 'ngo' && organization) {
+    if (role === "ngo" && organization) {
       user.ngoInfo = {
-        organization: organization
+        organization: organization,
       };
     }
 
@@ -56,7 +61,9 @@ exports.register = async (req, res) => {
     });
   } catch (error) {
     console.error("Error in register:", error);
-    res.status(500).json({ success: false, message: error.message || "Server error" });
+    res
+      .status(500)
+      .json({ success: false, message: error.message || "Server error" });
   }
 };
 
@@ -69,7 +76,7 @@ exports.login = async (req, res) => {
     if (!email || !password) {
       return res.status(400).json({
         success: false,
-        message: "Please provide email and password"
+        message: "Please provide email and password",
       });
     }
 
@@ -80,7 +87,7 @@ exports.login = async (req, res) => {
     if (!user) {
       return res.status(401).json({
         success: false,
-        message: "Invalid credentials"
+        message: "Invalid credentials",
       });
     }
 
@@ -88,7 +95,8 @@ exports.login = async (req, res) => {
     if (user.isLocked()) {
       return res.status(401).json({
         success: false,
-        message: "Account is locked due to too many failed login attempts. Try again later."
+        message:
+          "Account is locked due to too many failed login attempts. Try again later.",
       });
     }
 
@@ -98,10 +106,10 @@ exports.login = async (req, res) => {
     if (!isMatch) {
       // Increment login attempts
       await user.incrementLoginAttempts();
-      
+
       return res.status(401).json({
         success: false,
-        message: "Invalid credentials"
+        message: "Invalid credentials",
       });
     }
 
@@ -135,7 +143,7 @@ exports.login = async (req, res) => {
     console.error("Error in login:", error);
     res.status(500).json({
       success: false,
-      message: error.message || "Server error"
+      message: error.message || "Server error",
     });
   }
 };
@@ -143,24 +151,26 @@ exports.login = async (req, res) => {
 // Get current user (me)
 exports.getMe = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).select("-password -tokenVersion -loginAttempts -lockUntil");
+    const user = await User.findById(req.user.id).select(
+      "-password -tokenVersion -loginAttempts -lockUntil"
+    );
 
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: "User not found"
+        message: "User not found",
       });
     }
 
     res.status(200).json({
       success: true,
-      data: user
+      data: user,
     });
   } catch (error) {
     console.error("Error in getMe:", error);
     res.status(500).json({
       success: false,
-      message: error.message || "Server error"
+      message: error.message || "Server error",
     });
   }
 };
@@ -170,18 +180,18 @@ exports.logout = async (req, res) => {
   try {
     // Increment token version to invalidate existing tokens
     await User.findByIdAndUpdate(req.user.id, {
-      $inc: { tokenVersion: 1 }
+      $inc: { tokenVersion: 1 },
     });
 
     res.status(200).json({
       success: true,
-      message: "Logged out successfully"
+      message: "Logged out successfully",
     });
   } catch (error) {
     console.error("Error in logout:", error);
     res.status(500).json({
       success: false,
-      message: error.message || "Server error"
+      message: error.message || "Server error",
     });
   }
 };
@@ -194,7 +204,7 @@ exports.forgotPassword = async (req, res) => {
     if (!email) {
       return res.status(400).json({
         success: false,
-        message: "Please provide your email"
+        message: "Please provide your email",
       });
     }
 
@@ -203,7 +213,7 @@ exports.forgotPassword = async (req, res) => {
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: "No user found with that email"
+        message: "No user found with that email",
       });
     }
 
@@ -216,16 +226,18 @@ exports.forgotPassword = async (req, res) => {
     // URL would be: `${process.env.CLIENT_URL}/reset-password/${resetToken}`
 
     // Don't expose the token in production
-    const resetUrl = `${process.env.CLIENT_URL || 'http://localhost:3000'}/reset-password/${resetToken}`;
+    const resetUrl = `${
+      process.env.CLIENT_URL || "http://localhost:3000"
+    }/reset-password/${resetToken}`;
 
     res.status(200).json({
       success: true,
       message: "Password reset email sent",
-      resetUrl // Only include this for development/testing
+      resetUrl, // Only include this for development/testing
     });
   } catch (error) {
     console.error("Error in forgotPassword:", error);
-    
+
     // Reset user fields in case of error
     if (error.user) {
       error.user.passwordResetToken = undefined;
@@ -235,7 +247,7 @@ exports.forgotPassword = async (req, res) => {
 
     res.status(500).json({
       success: false,
-      message: error.message || "Server error"
+      message: error.message || "Server error",
     });
   }
 };
@@ -249,26 +261,23 @@ exports.resetPassword = async (req, res) => {
     if (!token || !password) {
       return res.status(400).json({
         success: false,
-        message: "Password and token are required"
+        message: "Password and token are required",
       });
     }
 
     // Hash token to compare with stored token
-    const hashedToken = crypto
-      .createHash("sha256")
-      .update(token)
-      .digest("hex");
+    const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
 
     // Find user with valid token
     const user = await User.findOne({
       passwordResetToken: hashedToken,
-      passwordResetExpires: { $gt: Date.now() }
+      passwordResetExpires: { $gt: Date.now() },
     });
 
     if (!user) {
       return res.status(400).json({
         success: false,
-        message: "Token is invalid or has expired"
+        message: "Token is invalid or has expired",
       });
     }
 
@@ -284,13 +293,13 @@ exports.resetPassword = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: "Password reset successful"
+      message: "Password reset successful",
     });
   } catch (error) {
     console.error("Error in resetPassword:", error);
     res.status(500).json({
       success: false,
-      message: error.message || "Server error"
+      message: error.message || "Server error",
     });
   }
 };
@@ -303,7 +312,7 @@ exports.updatePassword = async (req, res) => {
     if (!currentPassword || !newPassword) {
       return res.status(400).json({
         success: false,
-        message: "Please provide current and new password"
+        message: "Please provide current and new password",
       });
     }
 
@@ -313,7 +322,7 @@ exports.updatePassword = async (req, res) => {
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: "User not found"
+        message: "User not found",
       });
     }
 
@@ -323,7 +332,7 @@ exports.updatePassword = async (req, res) => {
     if (!isMatch) {
       return res.status(401).json({
         success: false,
-        message: "Current password is incorrect"
+        message: "Current password is incorrect",
       });
     }
 
@@ -345,13 +354,13 @@ exports.updatePassword = async (req, res) => {
     res.status(200).json({
       success: true,
       message: "Password updated successfully",
-      token
+      token,
     });
   } catch (error) {
     console.error("Error in updatePassword:", error);
     res.status(500).json({
       success: false,
-      message: error.message || "Server error"
+      message: error.message || "Server error",
     });
   }
-}; 
+};

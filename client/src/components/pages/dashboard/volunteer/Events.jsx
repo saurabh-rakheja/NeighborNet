@@ -106,12 +106,16 @@ const Events = () => {
           const response = await volunteerApi.getApplications();
 
           if (response.success) {
-            const applications = response.data || [];
+            const applications = response.applications || [];
 
             // Update events to mark those that the volunteer has already applied to
             const updatedEvents = events.map((event) => ({
               ...event,
-              isApplied: applications.some((app) => app.eventId === event._id),
+              isApplied: applications.some(
+                (app) =>
+                  (app.event && app.event._id === event._id) ||
+                  app.eventId === event._id
+              ),
             }));
 
             setEvents(updatedEvents);
@@ -119,7 +123,11 @@ const Events = () => {
             // Also update filtered events
             const updatedFilteredEvents = filteredEvents.map((event) => ({
               ...event,
-              isApplied: applications.some((app) => app.eventId === event._id),
+              isApplied: applications.some(
+                (app) =>
+                  (app.event && app.event._id === event._id) ||
+                  app.eventId === event._id
+              ),
             }));
 
             setFilteredEvents(updatedFilteredEvents);
@@ -133,7 +141,7 @@ const Events = () => {
     if (events.length > 0) {
       fetchApplications();
     }
-  }, [events.length, isNGO, user?.role]);
+  }, [events.length, isNGO, user?.role, filteredEvents]);
 
   // Apply filters and search
   useEffect(() => {
@@ -267,8 +275,10 @@ const Events = () => {
     setApplying(true);
 
     try {
-      // Apply without specifying a shift
-      const response = await volunteerApi.applyForEvent(eventId);
+      // Apply for the event
+      const response = await volunteerApi.applyForEvent(eventId, {
+        motivationLetter: "I am interested in this volunteering opportunity.",
+      });
 
       if (response.success) {
         // Update the event in state to mark it as applied
@@ -290,7 +300,12 @@ const Events = () => {
       console.error("Error applying for event:", error);
 
       // Check if the error message indicates the user is already registered
-      if (error.message && error.message.includes("already registered")) {
+      if (
+        error.message &&
+        (error.message.includes("already registered") ||
+          error.message.includes("already applied") ||
+          error.message.includes("already exists"))
+      ) {
         toast.info("You have already registered for this event");
 
         // Update UI to show as applied anyway

@@ -73,6 +73,18 @@ const volunteerApi = {
     }
   },
 
+  // Get volunteer applications with enhanced debugging
+  getApplicationsDebug: async (params = {}) => {
+    try {
+      const response = await api.get("/events/volunteer-applications", {
+        params,
+      });
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
   // Get application details
   getApplicationById: async (applicationId) => {
     try {
@@ -210,7 +222,7 @@ const volunteerApi = {
   applyForEvent: async (eventId, applicationData = {}) => {
     try {
       const response = await api.post(
-        `/events/${eventId}/apply`,
+        `/events/${eventId}/applications`,
         applicationData
       );
       return response.data;

@@ -34,19 +34,62 @@ const MyApplications = () => {
     const fetchApplications = async () => {
       try {
         setLoading(true);
-        const response = await volunteerApi.getApplications();
+        // First try with the debug endpoint
+        const response = await volunteerApi.getApplicationsDebug();
+        console.log("Applications debug response:", response);
 
         if (response.success) {
-          setApplications(response.applications || []);
-          setFilteredApplications(response.applications || []);
+          // Make sure we're using the correct property from the response
+          const applications = response.applications || [];
+          console.log("Fetched applications:", applications);
+
+          // If we have applications but they're missing event data, add a debug note
+          const processedApplications = applications.map((app) => {
+            if (!app.event) {
+              console.warn("Application missing event data:", app);
+              return {
+                ...app,
+                event: {
+                  title: app._debug?.missingEvent
+                    ? "Event no longer exists"
+                    : "Event data missing",
+                  date: new Date(),
+                  location: "Unknown location",
+                },
+              };
+            }
+
+            // Ensure dates are correctly formatted
+            if (app.event && app.event.startDate) {
+              app.event.date = app.event.startDate;
+            }
+
+            return app;
+          });
+
+          setApplications(processedApplications);
+          setFilteredApplications(processedApplications);
         } else {
           toast.error("Failed to fetch applications");
         }
       } catch (error) {
-        console.error("Error fetching applications:", error);
-        toast.error(
-          error.message || "An error occurred while fetching applications"
-        );
+        console.error("Error fetching applications with debug:", error);
+        // Fall back to regular endpoint
+        try {
+          const response = await volunteerApi.getApplications();
+          console.log("Fallback response:", response);
+
+          if (response.success) {
+            const applications = response.applications || [];
+            setApplications(applications);
+            setFilteredApplications(applications);
+          } else {
+            toast.error("Failed to fetch applications (fallback)");
+          }
+        } catch (fallbackError) {
+          console.error("Error in fallback fetch:", fallbackError);
+          toast.error("Could not retrieve your applications");
+        }
       } finally {
         setLoading(false);
       }
@@ -60,15 +103,11 @@ const MyApplications = () => {
     const fetchRegisteredEvents = async () => {
       try {
         setEventsLoading(true);
-        console.log("Fetching volunteer registrations...");
         const response = await volunteerApi.getVolunteerRegistrations();
-        console.log("Registration response:", response);
 
         if (response.success) {
-          console.log("Successfully fetched registrations:", response.data);
           setRegisteredEvents(response.data || []);
         } else {
-          console.error("Failed response from API:", response);
           toast.error("Failed to fetch registered events");
         }
       } catch (error) {
@@ -275,40 +314,6 @@ const MyApplications = () => {
     }
   };
 
-  // Add a debug utility to test different endpoints directly
-  const testDirectApiCall = async (endpoint) => {
-    try {
-      console.log(`Testing direct API call to: ${endpoint}`);
-
-      // Get the authentication token
-      const token = localStorage.getItem("auth-token");
-      if (!token) {
-        console.error("No auth token found");
-        return;
-      }
-
-      // Make a direct fetch request to the API
-      const response = await fetch(
-        `${
-          import.meta.env.VITE_API_URL || "http://localhost:5000/api"
-        }${endpoint}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      const data = await response.json();
-      console.log(`Response from ${endpoint}:`, data);
-
-      return data;
-    } catch (error) {
-      console.error(`Error calling ${endpoint}:`, error);
-    }
-  };
-
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -320,6 +325,68 @@ const MyApplications = () => {
   return (
     <div className="max-w-6xl mx-auto px-4 py-6">
       <h1 className="text-2xl font-bold mb-6">My Volunteer Activities</h1>
+
+      {/* Debug panel (only visible in development mode) */}
+      {import.meta.env.DEV && applications.length === 0 && !loading && (
+        <div className="bg-yellow-50 border border-yellow-100 rounded-lg p-4 mb-6">
+          <h3 className="text-yellow-800 font-medium mb-2">
+            Debug Information
+          </h3>
+          <div className="text-sm">
+            <p>Applications count: {applications.length}</p>
+            <p>Last fetch attempt: {new Date().toLocaleTimeString()}</p>
+            <button
+              onClick={async () => {
+                try {
+                  // Direct API call to debug endpoint
+                  const token = localStorage.getItem("auth-token");
+                  if (!token) {
+                    console.error("No auth token found");
+                    return;
+                  }
+
+                  // Test the raw endpoint
+                  const response = await fetch(
+                    `${
+                      import.meta.env.VITE_API_URL ||
+                      "http://localhost:5000/api"
+                    }/events/applications`,
+                    {
+                      headers: {
+                        Authorization: `Bearer ${token}`,
+                        "Content-Type": "application/json",
+                      },
+                    }
+                  );
+                  const data = await response.json();
+                  console.log("Debug direct API response:", data);
+
+                  if (
+                    data.success &&
+                    data.applications &&
+                    data.applications.length > 0
+                  ) {
+                    // Update with this data for testing
+                    setApplications(data.applications);
+                    setFilteredApplications(data.applications);
+                    toast.success(
+                      `Found ${data.applications.length} applications`
+                    );
+                  } else {
+                    toast.info("No applications found from direct API call");
+                  }
+                } catch (error) {
+                  console.error("Debug API call error:", error);
+                  toast.error("Error in debug API call");
+                }
+              }}
+              className="mt-2 bg-blue-500 hover:bg-blue-600 text-white py-1 px-3 rounded text-sm"
+            >
+              Test Direct API Call
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="flex border-b border-gray-200 mb-6">
@@ -457,7 +524,11 @@ const MyApplications = () => {
                           {application.event?.location && (
                             <div className="flex items-start">
                               <FiMapPin className="flex-shrink-0 mr-2 h-4 w-4 text-gray-500 mt-0.5" />
-                              <span>{application.event.location}</span>
+                              <span>
+                                {typeof application.event.location === "string"
+                                  ? application.event.location
+                                  : `${application.event.location.address}, ${application.event.location.city}, ${application.event.location.state} ${application.event.location.zipCode}`}
+                              </span>
                             </div>
                           )}
                         </div>
@@ -537,78 +608,6 @@ const MyApplications = () => {
         <>
           <h2 className="text-xl font-semibold mb-4">My Registered Events</h2>
 
-          {/* Debug information */}
-          <div className="bg-yellow-100 p-4 rounded-lg mb-4">
-            <h3 className="font-bold text-yellow-800 mb-2">
-              Debug Information
-            </h3>
-            <p>
-              <strong>Events Loading:</strong> {eventsLoading ? "Yes" : "No"}
-            </p>
-            <p>
-              <strong>Registered Events Count:</strong>{" "}
-              {registeredEvents ? registeredEvents.length : "undefined"}
-            </p>
-            <p>
-              <strong>API Endpoint:</strong> /participations/volunteer
-            </p>
-
-            <div className="flex flex-wrap gap-2 mt-2">
-              <button
-                onClick={() => {
-                  console.log("Manual refresh");
-                  const fetchDebug = async () => {
-                    try {
-                      setEventsLoading(true);
-                      console.log(
-                        "Manually fetching volunteer registrations..."
-                      );
-                      const response =
-                        await volunteerApi.getVolunteerRegistrations();
-                      console.log("Debug response:", response);
-
-                      if (response.success) {
-                        setRegisteredEvents(response.data || []);
-                      } else {
-                        toast.error("Failed to fetch registered events");
-                      }
-                    } catch (error) {
-                      console.error("Debug error:", error);
-                      toast.error("Error fetching volunteer registrations");
-                    } finally {
-                      setEventsLoading(false);
-                    }
-                  };
-                  fetchDebug();
-                }}
-                className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-              >
-                Refresh Registrations
-              </button>
-
-              <button
-                onClick={() => testDirectApiCall("/participations/volunteer")}
-                className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
-              >
-                Test API
-              </button>
-
-              <button
-                onClick={() => testDirectApiCall("/events/applications")}
-                className="bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600"
-              >
-                Test Applications
-              </button>
-
-              <button
-                onClick={() => testDirectApiCall("/volunteers/profile")}
-                className="bg-orange-500 text-white px-4 py-2 rounded hover:bg-orange-600"
-              >
-                Test Profile
-              </button>
-            </div>
-          </div>
-
           {eventsLoading ? (
             <div className="flex justify-center items-center h-64">
               <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
@@ -686,22 +685,10 @@ const MyApplications = () => {
                         <div className="flex items-center text-sm text-gray-600 mb-3">
                           <FiMapPin className="mr-2" />
                           {registration.eventId && registration.eventId.location
-                            ? registration.eventId.location
+                            ? typeof registration.eventId.location === "string"
+                              ? registration.eventId.location
+                              : `${registration.eventId.location.address}, ${registration.eventId.location.city}, ${registration.eventId.location.state} ${registration.eventId.location.zipCode}`
                             : "No location specified"}
-                        </div>
-
-                        <div className="text-xs text-gray-500 mt-2">
-                          Registration ID: {registration._id}
-                          <br />
-                          Status: {registration.status}
-                          <br />
-                          {registration.eventId &&
-                            typeof registration.eventId !== "string" && (
-                              <>
-                                Event title: {registration.eventId.title}
-                                <br />
-                              </>
-                            )}
                         </div>
                       </div>
 
@@ -736,10 +723,7 @@ const MyApplications = () => {
                                 Withdrawing...
                               </>
                             ) : (
-                              <>
-                                <FiSlash className="mr-1.5 h-4 w-4" />
-                                Withdraw
-                              </>
+                              "Withdraw"
                             )}
                           </button>
                         )}
