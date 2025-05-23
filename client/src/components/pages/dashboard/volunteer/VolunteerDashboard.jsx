@@ -98,9 +98,6 @@ const VolunteerDashboard = () => {
         }
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
-        toast.error(
-          "Failed to load dashboard data. Using cached data instead."
-        );
 
         // Fallback to user data
         setStats({

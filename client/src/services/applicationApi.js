@@ -124,6 +124,16 @@ const applicationApi = {
       throw error;
     }
   },
+
+  requestPasswordReset : async (email) => {
+    try {
+    const response = await axios.post("http://localhost:5000/api/auth/send-reset", { email });
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+  },
+  
 };
 
 export { applicationApi };

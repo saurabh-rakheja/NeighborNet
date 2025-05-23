@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+
+import { Link, useParams, useNavigate } from "react-router-dom";
 import { FiArrowLeft, FiAlertCircle, FiMail } from "react-icons/fi";
 import useAuthStore from "../../../store/authStore";
 
@@ -8,6 +9,8 @@ const ForgotPassword = () => {
   const [submitted, setSubmitted] = useState(false);
   const [validationError, setValidationError] = useState("");
   const { isLoading, error, requestPasswordReset, clearError } = useAuthStore();
+
+   const navigate = useNavigate();
 
   // Clear errors when component mounts or unmounts
   useEffect(() => {
@@ -36,13 +39,14 @@ const ForgotPassword = () => {
       return;
     }
 
-    try {
-      // Request password reset
-      const response = await requestPasswordReset(email);
 
-      if (response.success) {
-        setSubmitted(true);
-      }
+    try {
+      AuthStore.sen
+      useAuthStore.requestPasswordReset(email); // Call the requestPasswordReset function from the store
+      // Handle success response here if needed
+      setSubmitted(true); // Set submitted to true to show success message
+      setEmail(""); // Clear the email input field
+      navigate("/auth/login");
     } catch (err) {
       console.error("Password reset request failed:", err);
     }
